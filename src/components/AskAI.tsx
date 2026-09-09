@@ -9,7 +9,7 @@
 import { useState } from 'react';
 import {
   MessageSquare, Send, Sparkles, AlertCircle, RefreshCw,
-  CheckCircle2, AlertTriangle, ShieldAlert, Target, Clock, Zap
+  CheckCircle2, AlertTriangle, Zap
 } from 'lucide-react';
 import { aiService } from '../services/ai/aiService';
 import type { AIAnalysis, AIEvidence } from '../types/ai';
@@ -251,12 +251,12 @@ export function AskAI() {
                               }}
                             >
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-                                <span style={{ fontWeight: 600 }}>{obs.text}</span>
+                                <span style={{ fontWeight: 600 }}>{obs.statement}</span>
                                 <span className="badge badge-neutral" style={{ fontSize: 9 }}>{obs.type}</span>
                               </div>
-                              {obs.evidenceIds && obs.evidenceIds.length > 0 && (
+                              {obs.evidenceRefs.length > 0 && (
                                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
-                                  {obs.evidenceIds.map((eid) => (
+                                  {obs.evidenceRefs.map((eid) => (
                                     <span key={eid} style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '1px 4px', borderRadius: 2 }}>
                                       {eid}
                                     </span>
@@ -278,7 +278,7 @@ export function AskAI() {
                         </div>
                         {msg.analysis.contradictions.map((c) => (
                           <div key={c.id} style={{ fontSize: 'var(--text-xs)', padding: '6px 10px', background: 'rgba(245, 158, 11, 0.08)', borderRadius: 'var(--radius-sm)', marginBottom: 4 }}>
-                            <strong>{c.claim}:</strong> {c.reality}
+                            <strong>{c.statedIntent}:</strong> {c.observedReality}
                           </div>
                         ))}
                       </div>
@@ -293,8 +293,8 @@ export function AskAI() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {msg.analysis.priorities.map((p) => (
                             <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)' }}>
-                              <CheckCircle2 size={12} style={{ color: p.urgency === 'HIGH' ? 'var(--clr-danger)' : 'var(--clr-primary)', flexShrink: 0 }} />
-                              <span style={{ fontWeight: 600 }}>{p.title}:</span>
+                              <CheckCircle2 size={12} style={{ color: p.nature === 'PRIORITY' ? 'var(--clr-danger)' : 'var(--clr-primary)', flexShrink: 0 }} />
+                              <span style={{ fontWeight: 600 }}>{p.area}:</span>
                               <span className="text-muted">{p.rationale}</span>
                             </div>
                           ))}

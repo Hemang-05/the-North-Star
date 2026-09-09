@@ -6,11 +6,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Sparkles, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert,
-  Flame, HelpCircle, ArrowRight, Layers, Target, Clock, ChevronDown, ChevronUp
+  Sparkles, RefreshCw, AlertTriangle, Flame, ArrowRight, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { aiService } from '../../services/ai/aiService';
-import type { AIAnalysis, AIAnalysisMode, AIObservation } from '../../types/ai';
+import type { AIAnalysis, AIAnalysisMode } from '../../types/ai';
 import type { PillarSlug } from '../../types/core';
 import type { TimePeriodType } from '../../types/intelligence';
 

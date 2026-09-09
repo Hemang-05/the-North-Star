@@ -17,8 +17,6 @@ import type { TimePeriodType } from '../../types/intelligence';
 import { getPeriodBounds } from '../timeAggregation';
 import { generateIntelligenceSnapshot } from '../intelligenceFacts';
 import { evaluateAllGoals, loadNorthStar } from '../kpiEvaluation';
-import { dbGetAll, STORES } from '../db';
-import type { ActivityEvent } from '../../types/core';
 
 export interface BuildContextOptions {
   mode: AIAnalysisMode;
@@ -67,22 +65,9 @@ export async function buildCanonicalAIContext(options: BuildContextOptions): Pro
     relevantGoals = allGoals.filter((g) => g.pillarId === pillarScope);
   }
 
-  // 4. Fetch recent ActivityEvents (minimized milestone summary, not raw dump)
-  let rawEvents: ActivityEvent[] = [];
-  try {
-    rawEvents = await dbGetAll<ActivityEvent>(STORES.ACTIVITY_EVENTS);
-  } catch {
-    rawEvents = [];
-  }
-
-  // Take most recent 15 relevant events within current period
-  const periodEvents = rawEvents
-    .filter((e) => e.occurredAt >= periodBounds.start && e.occurredAt <= periodBounds.end)
-    .filter((e) => !pillarScope || e.pillarId === pillarScope)
-    .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
-    .slice(0, 15);
-
-  // 5. Build the Deterministic Evidence Catalog
+  // 4. Build the Deterministic Evidence Catalog.
+  // Activity events are intentionally not included: AIContext is a minimized,
+  // structured contract rather than a raw event-data export.
   const evidenceCatalog: AIEvidence[] = [];
 
   // North Star Evidence
@@ -210,7 +195,7 @@ export async function buildCanonicalAIContext(options: BuildContextOptions): Pro
       category: 'TREND',
       label: t.title,
       source: 'TrendFact',
-      value: t.statement,
+      value: t.description,
     });
   }
 
@@ -366,4 +351,3 @@ function pfEfficiencyValue(p: any): string | undefined {
   }
   return undefined;
 }
-
