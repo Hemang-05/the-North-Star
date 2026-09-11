@@ -6,8 +6,8 @@
 
 import { useState } from 'react';
 import {
-  LineChart, Plus, CheckCircle2, AlertTriangle, Trash2,
-  TrendingUp, TrendingDown, Clock, ShieldCheck, ShieldAlert,
+  LineChart, Plus, AlertTriangle, Trash2,
+  TrendingUp, Clock, ShieldCheck, ShieldAlert,
   ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';

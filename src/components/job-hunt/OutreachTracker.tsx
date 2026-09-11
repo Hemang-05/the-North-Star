@@ -9,14 +9,10 @@ import {
   MessageSquare,
   Plus,
   CheckCircle,
-  Clock,
-  ExternalLink,
   Trash2,
   Edit2,
   Search,
-  Filter,
   RefreshCw,
-  Send,
 } from 'lucide-react';
 import { useStore, logEvent, notifyDataChange } from '../../hooks/useDatabase';
 import { dbPut, dbDelete, STORES } from '../../services/db';
@@ -26,7 +22,7 @@ import type {
   OutreachContactType,
   JobOpportunity,
 } from '../../types';
-import { generateId, now, formatDate, timeAgo, safePct, formatSafePercent } from '../../utils/helpers';
+import { generateId, now, timeAgo, safePct, formatSafePercent } from '../../utils/helpers';
 import { showToast } from '../Toast';
 
 interface OutreachTrackerProps {
@@ -38,7 +34,7 @@ const CHANNELS: OutreachChannel[] = ['LINKEDIN', 'EMAIL', 'TWITTER', 'REFERRAL',
 const CONTACT_TYPES: OutreachContactType[] = ['FOUNDER', 'RECRUITER', 'HR', 'PEER', 'OTHER'];
 
 export function OutreachTracker({ opportunities }: OutreachTrackerProps) {
-  const { items: outreaches, loading, refresh } = useStore<JobOutreach>(STORES.JOB_OUTREACH);
+  const { items: outreaches, loading } = useStore<JobOutreach>(STORES.JOB_OUTREACH);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedChannel, setSelectedChannel] = useState<string>('ALL');

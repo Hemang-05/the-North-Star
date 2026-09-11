@@ -10,9 +10,8 @@ import {
 } from 'lucide-react';
 import { useTodayEvents, useFocusSessions, useGoals, logEvent } from '../hooks/useDatabase';
 import { PILLARS, QUICK_EVENTS } from '../config/pillars';
-import { formatDuration, groupBy, sumBy, formatNumber, startOfDaysAgo, endOfToday } from '../utils/helpers';
+import { formatDuration, groupBy, sumBy, formatNumber } from '../utils/helpers';
 import { showToast } from './Toast';
-import { ActivityFeed } from './ActivityFeed';
 import type { PillarSlug } from '../types';
 import type { ViewId } from './Sidebar';
 

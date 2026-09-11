@@ -6,14 +6,14 @@
 
 import { useState } from 'react';
 import {
-  Target, Plus, Trash2, CheckCircle2, AlertCircle, Edit2, X,
-  TrendingUp, BookOpen, Microscope, ShieldCheck, Flame,
+  Target, Plus, Trash2, Edit2,
+  BookOpen, Microscope, ShieldCheck, Flame,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';
 import type { Goal, GoalCadence, GoalTargetType } from '../../types';
 import type { ForexKpiSummary } from '../../services/forexKpi';
-import { generateId, now, formatSafePercent } from '../../utils/helpers';
+import { generateId, now } from '../../utils/helpers';
 import { showToast } from '../Toast';
 
 interface ForexGoalsTabProps {
@@ -164,6 +164,7 @@ export function ForexGoalsTab({ kpis, goals }: ForexGoalsTabProps) {
       cadence: template.cadence,
       unit: template.unit,
       currentComputedValue: 0,
+      weight: 1.0,
       isActive: true,
       createdAt: now(),
     };
@@ -213,6 +214,7 @@ export function ForexGoalsTab({ kpis, goals }: ForexGoalsTabProps) {
         cadence: form.cadence,
         unit: form.unit.trim() || undefined,
         currentComputedValue: 0,
+        weight: 1.0,
         isActive: true,
         createdAt: now(),
       };

@@ -3,8 +3,7 @@
 // Live target tracking with pre-configured Agency goal templates.
 // ============================================================================
 
-import { useState } from 'react';
-import { Target, Plus, Trash2, TrendingUp } from 'lucide-react';
+import { Target, Plus, Trash2 } from 'lucide-react';
 import { useGoals } from '../../hooks/useDatabase';
 import type { AgencyKpiSummary } from '../../services/agencyKpi';
 import { formatINR } from '../../utils/helpers';
@@ -22,7 +21,7 @@ const GOAL_TEMPLATES = [
   { title: 'Weekly Agency Focus Hours', targetValue: 20, unit: 'hours', cadence: 'WEEKLY' as const, targetType: 'COUNT' as const },
 ];
 
-export function AgencyGoals({ kpis }: AgencyGoalsProps) {
+export function AgencyGoals({ kpis: _kpis }: AgencyGoalsProps) {
   const { goals, addGoal, deleteGoal } = useGoals();
   const agencyGoals = goals.filter(g => g.pillarId === 'agency');
 

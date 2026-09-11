@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Megaphone, Plus, Trash2, Edit2, TrendingUp, DollarSign } from 'lucide-react';
+import { Megaphone, Plus, Trash2, Edit2 } from 'lucide-react';
 import type {
   VoireMarketingCampaign,
   VoireMarketingChannel,
@@ -55,10 +55,15 @@ export function VoireMarketingTab({ campaigns, drops, orders }: VoireMarketingTa
 
   const openEditModal = (camp: VoireMarketingCampaign) => {
     setEditingCampaign(camp);
-    setName(camp.name);
-    setChannel(camp.channel);
-    setCampaignType(camp.campaignType);
-    setStatus(camp.status);
+    setName(camp.name || camp.title || '');
+    const validChannels: VoireMarketingChannel[] = ['META_ADS', 'GOOGLE_ADS', 'INFLUENCER', 'EMAIL_MARKETING', 'COMMUNITY', 'INSTAGRAM', 'TIKTOK', 'EMAIL', 'PAID_ADS', 'OTHER'];
+    setChannel(validChannels.includes(camp.channel as VoireMarketingChannel) ? (camp.channel as VoireMarketingChannel) : 'META_ADS');
+    const validTypes: Array<'PAID_ACQUISITION' | 'INFLUENCER_SEEDING' | 'ORGANIC_CONTENT' | 'EMAIL_SMS' | 'COMMUNITY'> = [
+      'PAID_ACQUISITION', 'INFLUENCER_SEEDING', 'ORGANIC_CONTENT', 'EMAIL_SMS', 'COMMUNITY'
+    ];
+    setCampaignType(validTypes.includes(camp.campaignType as any) ? (camp.campaignType as any) : 'PAID_ACQUISITION');
+    const validStatuses: VoireMarketingStatus[] = ['DRAFT', 'ACTIVE', 'PAUSED', 'COMPLETED'];
+    setStatus(validStatuses.includes(camp.status as VoireMarketingStatus) ? (camp.status as VoireMarketingStatus) : 'ACTIVE');
     setSpendAmount(camp.spendAmount);
     setImpressions(camp.impressions ?? '');
     setClicks(camp.clicks ?? '');
@@ -202,8 +207,8 @@ export function VoireMarketingTab({ campaigns, drops, orders }: VoireMarketingTa
                       </span>
                     </td>
                     <td>
-                      <span className={`voire-badge ${camp.status.toLowerCase()}`}>
-                        {camp.status}
+                      <span className={`voire-badge ${(camp.status || 'DRAFT').toLowerCase()}`}>
+                        {camp.status || 'DRAFT'}
                       </span>
                     </td>
                     <td>
@@ -211,7 +216,7 @@ export function VoireMarketingTab({ campaigns, drops, orders }: VoireMarketingTa
                         <button className="voire-btn-secondary" style={{ padding: '0.375rem 0.5rem' }} onClick={() => openEditModal(camp)}>
                           <Edit2 size={14} />
                         </button>
-                        <button className="voire-btn-danger" onClick={() => handleDelete(camp.id, camp.name)}>
+                        <button className="voire-btn-danger" onClick={() => handleDelete(camp.id, camp.name || camp.title || 'campaign')}>
                           <Trash2 size={14} />
                         </button>
                       </div>

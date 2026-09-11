@@ -11,7 +11,6 @@
 import type { Goal, PillarSlug, ActivityEvent } from '../types/core';
 import type {
   TimePeriodType,
-  PeriodBounds,
   TimeSummary,
   ComparisonFact,
   TrendFact,
@@ -24,7 +23,6 @@ import { getMetricDefinition } from './kpiRegistry';
 import {
   loadAllPillarsKpisContext,
   evaluateGoalSnapshot,
-  type KpisEvaluationContext,
 } from './kpiEvaluation';
 import {
   getPeriodBounds,
@@ -170,10 +168,10 @@ export function computeComparisonFact(params: {
  */
 export function detectAnomalies(params: {
   timeSummary: TimeSummary;
-  goals: Goal[];
+  goals?: Goal[];
   comparisons: ComparisonFact[];
 }): AnomalyFact[] {
-  const { timeSummary, goals, comparisons } = params;
+  const { timeSummary, comparisons } = params;
   const anomalies: AnomalyFact[] = [];
 
   // 1. Time Drop Anomaly: Overall focus dropped > 50% vs previous period (if previous was substantial)
@@ -405,12 +403,13 @@ export async function generateIntelligenceSnapshot(
 
   // Forex study hours
   if (kpisContext.forex) {
+    const studyHours = Math.round((kpisContext.forex.totalStudyMinutes || 0) / 60);
     comparisons.push(
       computeComparisonFact({
         metricKey: 'forex.studyHoursMonth',
         label: 'Forex Study Hours',
-        current: kpisContext.forex.studyHoursMonth,
-        previous: kpisContext.forex.studyHoursMonth,
+        current: studyHours,
+        previous: studyHours,
       })
     );
   }

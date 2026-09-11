@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Package, Plus, Trash2, Edit2, Tag } from 'lucide-react';
+import { Package, Plus, Trash2, Edit2 } from 'lucide-react';
 import type { VoireProduct, VoireProductCategory, VoireProductStatus, VoireDesign } from '../../types/pillars';
 import { dbPut, dbDelete, STORES } from '../../services/db';
 import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
@@ -46,10 +46,12 @@ export function VoireProductsTab({ products, designs }: VoireProductsTabProps) {
 
   const openEditModal = (product: VoireProduct) => {
     setEditingProduct(product);
-    setName(product.name);
+    setName(product.name || product.title || '');
     setSku(product.sku);
-    setCategory(product.category);
-    setStatus(product.status);
+    const validCategories: VoireProductCategory[] = ['HOODIE', 'TEE', 'SWEATSHIRT', 'HEADWEAR', 'PRINT', 'ACCESSORY', 'OTHER'];
+    setCategory(validCategories.includes(product.category as VoireProductCategory) ? (product.category as VoireProductCategory) : 'HOODIE');
+    const validStatuses: VoireProductStatus[] = ['ACTIVE', 'DRAFT', 'PAUSED', 'ARCHIVED', 'DEVELOPMENT', 'READY', 'LIVE', 'DISCONTINUED'];
+    setStatus(validStatuses.includes(product.status as VoireProductStatus) ? (product.status as VoireProductStatus) : 'ACTIVE');
     setRetailPrice(product.retailPrice);
     setBaseCost(product.baseCost);
     setShippingCostEst(product.shippingCostEst || '');
@@ -184,7 +186,7 @@ export function VoireProductsTab({ products, designs }: VoireProductsTabProps) {
                         <button className="voire-btn-secondary" style={{ padding: '0.375rem 0.5rem' }} onClick={() => openEditModal(product)}>
                           <Edit2 size={14} />
                         </button>
-                        <button className="voire-btn-danger" onClick={() => handleDelete(product.id, product.name)}>
+                        <button className="voire-btn-danger" onClick={() => handleDelete(product.id, product.name || product.title || 'product')}>
                           <Trash2 size={14} />
                         </button>
                       </div>

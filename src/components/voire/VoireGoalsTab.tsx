@@ -5,8 +5,8 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Target, Plus, Trash2, CheckCircle2, TrendingUp, Sparkles, Award } from 'lucide-react';
-import type { Goal, CadenceType } from '../../types';
+import { Target, Plus, Trash2, CheckCircle2, Sparkles } from 'lucide-react';
+import type { Goal, GoalCadence } from '../../types';
 import type { VoireKpiSummary } from '../../types/pillars';
 import { dbPut, dbDelete, STORES } from '../../services/db';
 import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
@@ -20,7 +20,7 @@ interface VoireGoalsTabProps {
 
 interface GoalTemplate {
   title: string;
-  cadence: CadenceType;
+  cadence: GoalCadence;
   targetValue: number;
   unit: string;
   description: string;
@@ -81,7 +81,7 @@ const OPTIONAL_TEMPLATES: GoalTemplate[] = [
 export function VoireGoalsTab({ goals, kpis }: VoireGoalsTabProps) {
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
-  const [cadence, setCadence] = useState<CadenceType>('MONTHLY');
+  const [cadence, setCadence] = useState<GoalCadence>('MONTHLY');
   const [targetValue, setTargetValue] = useState<number | ''>('');
   const [unit, setUnit] = useState('');
   const [description, setDescription] = useState('');
@@ -112,8 +112,12 @@ export function VoireGoalsTab({ goals, kpis }: VoireGoalsTabProps) {
       title: tmpl.title,
       description: tmpl.description,
       cadence: tmpl.cadence,
+      targetType: 'COUNT',
       targetValue: tmpl.targetValue,
       currentValue: currentVal,
+      currentComputedValue: currentVal,
+      weight: 1.0,
+      isActive: true,
       unit: tmpl.unit,
       status: 'ACTIVE',
       metadata: { metricKey: tmpl.metricKey },
@@ -153,8 +157,12 @@ export function VoireGoalsTab({ goals, kpis }: VoireGoalsTabProps) {
       title: title.trim(),
       description: description.trim() || undefined,
       cadence,
+      targetType: 'COUNT',
       targetValue,
       currentValue: 0,
+      currentComputedValue: 0,
+      weight: 1.0,
+      isActive: true,
       unit: unit.trim() || undefined,
       status: 'ACTIVE',
       createdAt: now,
@@ -325,7 +333,7 @@ export function VoireGoalsTab({ goals, kpis }: VoireGoalsTabProps) {
                   <select
                     className="voire-form-select"
                     value={cadence}
-                    onChange={(e) => setCadence(e.target.value as CadenceType)}
+                    onChange={(e) => setCadence(e.target.value as GoalCadence)}
                   >
                     <option value="WEEKLY">WEEKLY</option>
                     <option value="MONTHLY">MONTHLY</option>

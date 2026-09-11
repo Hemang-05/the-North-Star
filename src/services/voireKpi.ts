@@ -129,7 +129,6 @@ export function computeVoireKpis(input: VoireKpiInput): VoireKpiSummary {
     itemsByOrder.set(item.orderId, existing);
   }
 
-  const validOrders = orders.filter((o) => o.status !== 'CANCELLED' && o.fulfillmentStatus !== 'CANCELLED');
   const totalOrders = orders.length;
 
   let ordersThisWeek = 0;

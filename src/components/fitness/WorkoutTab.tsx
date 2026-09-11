@@ -5,7 +5,7 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Dumbbell, Plus, CheckCircle2, Flame, Award, Trash2, Calendar, Clock, ChevronRight } from 'lucide-react';
+import { Dumbbell, Plus, Award, Trash2, Calendar, Clock } from 'lucide-react';
 import type { WorkoutSession, ExerciseLog, WorkoutType } from '../../types/pillars';
 import { dbPut, dbDelete, STORES } from '../../services/db';
 import { logEvent, notifyDataChange } from '../../hooks/useDatabase';

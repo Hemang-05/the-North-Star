@@ -5,12 +5,12 @@
 
 import { useState } from 'react';
 import {
-  Plus, Building2, FolderOpen, X, Trash2, Edit3, CheckCircle2,
+  Plus, Building2, FolderOpen, Trash2, CheckCircle2,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';
 import type { AgencyClient, AgencyProject, AgencyInvoice, ClientStatus, ProjectStatus, BillingType } from '../../types';
-import { generateId, now, formatINR, timeAgo, formatDate } from '../../utils/helpers';
+import { generateId, now, formatINR, formatDate } from '../../utils/helpers';
 import { showToast } from '../Toast';
 
 interface ClientProjectManagerProps {

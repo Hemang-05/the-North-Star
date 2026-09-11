@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Trophy, Plus, Trash2, Calendar, Clock, Sparkles } from 'lucide-react';
+import { Trophy, Plus, Trash2, Calendar, Sparkles } from 'lucide-react';
 import type { WorkoutSession } from '../../types/pillars';
 import { dbPut, dbDelete, STORES } from '../../services/db';
 import { logEvent, notifyDataChange } from '../../hooks/useDatabase';

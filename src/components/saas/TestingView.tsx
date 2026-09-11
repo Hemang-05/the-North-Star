@@ -5,8 +5,8 @@
 
 import { useState } from 'react';
 import {
-  Plus, CheckCircle, XCircle, AlertTriangle, ShieldCheck,
-  Filter, Trash2, X, Clock,
+  Plus, CheckCircle, XCircle, AlertTriangle,
+  Filter, Trash2, X,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';

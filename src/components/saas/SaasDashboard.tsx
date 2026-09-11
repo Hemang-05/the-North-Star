@@ -5,11 +5,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Code2, Users, DollarSign, Target, TrendingUp, Zap, Activity,
-  Play, Plus, Tag, Share2, MessageSquare, ShieldCheck, CheckCircle2,
-  AlertTriangle, Clock, Layers, Sparkles, Send,
+  Code2, Users, Target, Zap, Activity,
+  Play, Plus, Tag, Share2, MessageSquare, ShieldCheck, X,
 } from 'lucide-react';
-import { useStore, useDataChangeListener, useActiveTimer, logEvent, notifyDataChange } from '../../hooks/useDatabase';
+import { useStore, useDataChangeListener, useActiveTimer } from '../../hooks/useDatabase';
 import { dbGetAll, STORES } from '../../services/db';
 import type {
   SaasFeature,
@@ -33,10 +32,8 @@ import {
   type SaasAiFacts,
 } from '../../services/aiContext';
 import {
-  formatDuration,
   formatINR,
   formatSafePercent,
-  formatDate,
   timeAgo,
 } from '../../utils/helpers';
 import { showToast } from '../Toast';
@@ -65,7 +62,7 @@ type TabType =
   | 'AI_AUDIT'
   | 'ACTIVITY';
 
-export function SaasDashboard({ onNavigate }: SaasDashboardProps) {
+export function SaasDashboard({ onNavigate: _onNavigate }: SaasDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('PRODUCT');
   const [kpis, setKpis] = useState<SaasKpiSummary | null>(null);
   const [statusEval, setStatusEval] = useState<StatusEvaluation | null>(null);
@@ -82,7 +79,7 @@ export function SaasDashboard({ onNavigate }: SaasDashboardProps) {
   const { items: goals } = useStore<Goal>(STORES.GOALS);
 
   // AI State
-  const [aiFacts, setAiFacts] = useState<SaasAiFacts | null>(null);
+  const [_aiFacts, setAiFacts] = useState<SaasAiFacts | null>(null);
   const [strategicAudit, setStrategicAudit] = useState<string>('');
   const [loadingAi, setLoadingAi] = useState(false);
 

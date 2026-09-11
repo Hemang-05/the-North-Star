@@ -11,10 +11,10 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Palette, Package, Sparkles, ShoppingCart, Megaphone,
   DollarSign, Target, Activity, RefreshCw, ChevronRight,
-  TrendingUp, Calendar, AlertTriangle, ShieldCheck, CheckCircle2
+  TrendingUp, ShieldCheck
 } from 'lucide-react';
 import { useStore, useDataChangeListener } from '../../hooks/useDatabase';
-import { dbGetAll, STORES } from '../../services/db';
+import { STORES } from '../../services/db';
 import type {
   VoireDesign,
   VoireProduct,
@@ -62,7 +62,7 @@ type TabType =
   | 'AI_AUDIT'
   | 'ACTIVITY';
 
-export function VoireDashboard({ onNavigate }: VoireDashboardProps) {
+export function VoireDashboard({ onNavigate: _onNavigate }: VoireDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('OVERVIEW');
 
   // Live entity stores
@@ -118,6 +118,7 @@ export function VoireDashboard({ onNavigate }: VoireDashboardProps) {
     score: 80,
     headline: 'VOIRE Brand Core Initialized',
     reason: 'Evaluating creative studio and commercial baseline.',
+    badges: [],
   });
 
   // AI Facts and Strategic Audit
@@ -364,8 +365,8 @@ export function VoireDashboard({ onNavigate }: VoireDashboardProps) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '200px', overflowY: 'auto' }}>
                   {voireEvents.slice(0, 5).map((evt) => (
                     <div key={evt.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8125rem', padding: '0.375rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <span style={{ color: '#f3f4f6' }}>{evt.title}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{timeAgo(evt.timestamp)}</span>
+                      <span style={{ color: '#f3f4f6' }}>{(evt.metadata?.title as string) || (evt.metadata?.name as string) || evt.eventType}</span>
+                      <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{timeAgo(evt.occurredAt)}</span>
                     </div>
                   ))}
                 </div>
@@ -468,16 +469,16 @@ export function VoireDashboard({ onNavigate }: VoireDashboardProps) {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span style={{ fontWeight: 700, color: '#ffffff', fontSize: '0.875rem' }}>{evt.eventType}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#a855f7', fontFamily: 'monospace' }}>{evt.entityRefType}</span>
+                      <span style={{ fontSize: '0.75rem', color: '#a855f7', fontFamily: 'monospace' }}>{evt.entityRef?.type}</span>
                     </div>
-                    <div style={{ fontSize: '0.8125rem', color: '#d1d5db', marginTop: '0.125rem' }}>{evt.title}</div>
+                    <div style={{ fontSize: '0.8125rem', color: '#d1d5db', marginTop: '0.125rem' }}>{(evt.metadata?.title as string) || (evt.metadata?.description as string) || evt.eventType}</div>
                     <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.125rem' }}>
-                      Entity ID: <code style={{ color: '#93c5fd' }}>{evt.entityRefId}</code>
+                      Entity ID: <code style={{ color: '#93c5fd' }}>{evt.entityRef?.id}</code>
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{timeAgo(evt.timestamp)}</div>
-                    <div style={{ fontSize: '0.6875rem', color: '#6b7280' }}>{formatDate(evt.timestamp)}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{timeAgo(evt.occurredAt)}</div>
+                    <div style={{ fontSize: '0.6875rem', color: '#6b7280' }}>{formatDate(evt.occurredAt)}</div>
                   </div>
                 </div>
               ))}

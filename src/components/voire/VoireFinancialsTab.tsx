@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { DollarSign, Plus, CheckCircle, Clock, Calendar, AlertCircle, FileText } from 'lucide-react';
+import { DollarSign, Plus, Calendar, FileText } from 'lucide-react';
 import type {
   VoireKpiSummary,
   VoireFinancialPeriod,

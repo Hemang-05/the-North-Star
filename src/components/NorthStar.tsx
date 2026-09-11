@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Star, Target, TrendingUp, AlertTriangle, Edit3, Check } from 'lucide-react';
 import { useGoals } from '../hooks/useDatabase';
 import { PILLARS } from '../config/pillars';
-import { formatINR, formatPercent, generateId, now } from '../utils/helpers';
+import { formatINR, formatPercent } from '../utils/helpers';
 import { showToast } from './Toast';
 import { AIAnalysisCard } from './ai/AIAnalysisCard';
 import type { Goal } from '../types';

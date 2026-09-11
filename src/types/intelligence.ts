@@ -8,7 +8,7 @@
 //    Code calculates facts deterministically; AI interprets later."
 // ============================================================================
 
-import type { PillarSlug, KpiValueState, GoalKpiSnapshot } from './core';
+import type { PillarSlug, KpiValueState, GoalKpiSnapshot } from './core.ts';
 
 export type TimePeriodType =
   | 'TODAY'

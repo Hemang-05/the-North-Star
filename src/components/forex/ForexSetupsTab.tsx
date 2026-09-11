@@ -5,14 +5,14 @@
 
 import { useState } from 'react';
 import {
-  Compass, Plus, CheckCircle2, AlertTriangle, Trash2,
-  Edit2, Clock, ShieldCheck, Target, ArrowRight, XCircle,
+  Compass, Plus, Trash2,
+  Edit2, Clock, ShieldCheck, Target,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';
 import type { ForexSetup, SetupStatus } from '../../types';
 import { ALL_SETUP_STATUSES, type ForexKpiSummary } from '../../services/forexKpi';
-import { generateId, now, formatDate } from '../../utils/helpers';
+import { generateId, now } from '../../utils/helpers';
 import { showToast } from '../Toast';
 
 interface ForexSetupsTabProps {

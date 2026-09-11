@@ -306,7 +306,6 @@ export function computeForexKpiSummary(
     }
   }
 
-  const closedTrades = tradesWin + tradesLoss + tradesBreakeven;
   const paperWinRate =
     tradesWin + tradesLoss > 0 ? safePct(tradesWin, tradesWin + tradesLoss) : null;
   const averageRMultiple =
@@ -347,7 +346,7 @@ export function computeForexKpiSummary(
     .map(([tag, count]) => ({
       mistake: tag as TradeMistake,
       count,
-      percentage: totalMistakesRecorded > 0 ? safePct(count, totalMistakesRecorded) : 0,
+      percentage: totalMistakesRecorded > 0 ? (safePct(count, totalMistakesRecorded) ?? 0) : 0,
     }))
     .filter((m) => m.count > 0)
     .sort((a, b) => b.count - a.count);

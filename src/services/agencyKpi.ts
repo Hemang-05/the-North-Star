@@ -10,14 +10,13 @@ import type {
   AgencyProject,
   AgencyLead,
   AgencyInvoice,
-  AgencyMaturityTier,
   AgencyMaturitySnapshot,
   LeadStage,
   FocusSession,
   ActivityEvent,
   Goal,
 } from '../types';
-import { safePct, startOfToday, startOfWeeksAgo, startOfMonth } from '../utils/helpers';
+import { safePct, startOfToday, startOfWeeksAgo } from '../utils/helpers';
 import { dbGetAll, dbPut, STORES } from './db';
 
 // ============================================================================
@@ -125,7 +124,6 @@ export function calculateAgencyKpis(params: {
 
   const todayIso = startOfToday();
   const weekAgoIso = startOfWeeksAgo(1);
-  const monthAgoIso = startOfMonth();
 
   // === FINANCIALS ===
   let realizedCash = 0;
@@ -306,7 +304,7 @@ export function calculateMaturityTier(data: {
   monthlyRevenue: number;
 }): AgencyMaturitySnapshot {
   const {
-    activeClients, realizedCash, totalDeliveryHours,
+    activeClients, totalDeliveryHours,
     activeLeads, qualifiedLeads, hasRecurringBilling, monthlyRevenue,
   } = data;
 

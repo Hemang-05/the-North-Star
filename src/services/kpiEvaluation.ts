@@ -15,6 +15,8 @@ import type {
   KpiValueState,
   GoalStatus,
   GoalKpiSnapshot,
+  FitnessKpiSummary,
+  VoireKpiSummary,
 } from '../types';
 import { getMetricDefinition } from './kpiRegistry';
 
@@ -23,8 +25,8 @@ import { loadJobHuntKpiSummary, type JobHuntKpiSummary } from './jobHuntKpi';
 import { loadAgencyKpiSummary, type AgencyKpiSummary } from './agencyKpi';
 import { loadSaasKpiSummary, type SaasKpiSummary } from './saasKpi';
 import { loadForexKpiSummary, type ForexKpiSummary } from './forexKpi';
-import { loadFitnessKpiSummary, type FitnessKpiSummary } from './fitnessKpi';
-import { loadVoireKpiSummary, type VoireKpiSummary } from './voireKpi';
+import { loadFitnessKpiSummary } from './fitnessKpi';
+import { loadVoireKpiSummary } from './voireKpi';
 import { dbGetAll, STORES } from './db';
 
 export interface CurrentKpiValueResult {
@@ -176,10 +178,10 @@ export async function getCurrentKpiValue(
   } else if (prefix === 'forex') {
     const kpis = context?.forex || (await loadForexKpiSummary());
     switch (metricKey) {
-      case 'forex.studyHoursMonth': rawVal = kpis.studyHoursMonth; break;
+      case 'forex.studyHoursMonth': rawVal = Math.round(kpis.totalStudyMinutes / 60); break;
       case 'forex.backtestedTrades': rawVal = kpis.totalBacktestedTrades; break;
       case 'forex.ruleAdherenceRate': rawVal = kpis.ruleAdherenceRate; break;
-      case 'forex.validatedSetups': rawVal = kpis.validatedSetups; break;
+      case 'forex.validatedSetups': rawVal = kpis.setupsValidated; break;
       case 'forex.cleanTradeStreak': rawVal = kpis.cleanTradeStreak; break;
       default:
         rawVal = undefined;
@@ -478,8 +480,8 @@ export async function loadNorthStar(refDate = new Date()): Promise<NorthStarEval
     const northStarGoal = goals.find((g) => g.cadence === 'NORTH_STAR' && g.pillarId === null);
     const target = northStarGoal?.targetValue || 10000000; // 1 Cr default
 
-    const agencyRealizedCash = agencyKpi?.realizedCashTotal || agencyKpi?.realizedCashThisMonth || 0;
-    const voireCashReceived = voireKpi?.financialReality?.cashReceived || 0;
+    const agencyRealizedCash = agencyKpi?.realizedCash || 0;
+    const voireCashReceived = voireKpi?.cashReceived || 0;
     const current = agencyRealizedCash + voireCashReceived;
 
     const gap = current - target;

@@ -6,14 +6,14 @@
 
 import { useState } from 'react';
 import {
-  Target, Plus, Trash2, CheckCircle2, AlertCircle, Edit2, X,
+  Target, Plus, Trash2, Edit2, X,
   TrendingUp, Users, DollarSign, Sparkles, Megaphone,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';
 import type { Goal, GoalCadence, GoalTargetType } from '../../types';
 import type { SaasKpiSummary } from '../../services/saasKpi';
-import { generateId, now, formatINR, formatSafePercent } from '../../utils/helpers';
+import { generateId, now } from '../../utils/helpers';
 import { showToast } from '../Toast';
 
 interface SaasGoalsProps {

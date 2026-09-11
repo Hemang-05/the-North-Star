@@ -5,14 +5,14 @@
 
 import { useState } from 'react';
 import {
-  Plus, CheckCircle2, Clock, AlertTriangle, Play, ShieldCheck,
-  ChevronRight, Filter, LayoutGrid, List, Trash2, X, AlertCircle,
+  Plus,
+  Filter, LayoutGrid, List, Trash2, X,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';
 import type { SaasFeature, FeatureStatus, FeaturePriority, SaasTestRun } from '../../types';
 import { ALL_FEATURE_STATUSES } from '../../services/saasKpi';
-import { generateId, now, formatDate, timeAgo } from '../../utils/helpers';
+import { generateId, now, formatDate } from '../../utils/helpers';
 import { showToast } from '../Toast';
 
 interface FeatureManagerProps {

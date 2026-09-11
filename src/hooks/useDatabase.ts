@@ -20,14 +20,16 @@ import type { PillarSlug } from '../types';
 // Simple event bus for cross-component reactivity
 type Listener = () => void;
 const listeners = new Set<Listener>();
-export function notifyDataChange() {
+export function notifyDataChange(_topic?: string) {
   listeners.forEach((fn) => fn());
 }
-export function useDataChangeListener(callback: Listener) {
+export function useDataChangeListener(callbackOrStore: any, maybeCallback?: Listener) {
+  const cb = typeof callbackOrStore === 'function' ? callbackOrStore : maybeCallback;
   useEffect(() => {
-    listeners.add(callback);
-    return () => { listeners.delete(callback); };
-  }, [callback]);
+    if (!cb) return;
+    listeners.add(cb);
+    return () => { listeners.delete(cb); };
+  }, [cb]);
 }
 
 // --- Activity Events ---
@@ -368,7 +370,7 @@ export function useGoals() {
     // Log update event
     await logEvent({
       pillarId: updated.pillarId || 'agency',
-      eventType: updated.isActive === false ? 'GOAL_DEACTIVATED' : 'GOAL_UPDATED',
+      eventType: updated.isActive === false ? 'GOAL_STATUS_CHANGED' : 'GOAL_UPDATED',
       source: 'USER',
       entityRef: {
         type: 'Goal',
@@ -392,7 +394,7 @@ export function useGoals() {
     if (existing) {
       await logEvent({
         pillarId: existing.pillarId || 'agency',
-        eventType: 'GOAL_DEACTIVATED',
+        eventType: 'GOAL_STATUS_CHANGED',
         source: 'USER',
         entityRef: {
           type: 'Goal',

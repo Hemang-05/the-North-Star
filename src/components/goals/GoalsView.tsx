@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Target, Plus, Filter, CheckCircle2, AlertTriangle, Clock,
+  Target, Plus, CheckCircle2, AlertTriangle, Clock,
   ArrowUpRight, ArrowDownRight, RefreshCw, X, Sparkles, Star, Edit3, Trash2
 } from 'lucide-react';
 import { useGoals } from '../../hooks/useDatabase';
@@ -17,7 +17,6 @@ import { PILLARS } from '../../config/pillars';
 import {
   getAllMetricDefinitions,
   getMetricDefinition,
-  getMetricsByPillar,
 } from '../../services/kpiRegistry';
 import {
   loadAllPillarsKpisContext,

@@ -10,12 +10,11 @@ import {
   Clock, ArrowUpRight, ArrowDownRight, AlertTriangle, BarChart2,
 } from 'lucide-react';
 import { useTodayEvents, useFocusSessions } from '../hooks/useDatabase';
-import { PILLARS, PILLAR_MAP } from '../config/pillars';
+import { PILLARS } from '../config/pillars';
 import { formatDuration, formatINR, groupBy, sumBy, formatNumber } from '../utils/helpers';
 import { ActivityFeed } from './ActivityFeed';
 import { generateIntelligenceSnapshot } from '../services/intelligenceFacts';
 import { getPeriodBounds, aggregateFocusSessions } from '../services/timeAggregation';
-import type { PillarSlug } from '../types';
 import type { ViewId } from './Sidebar';
 import type { IntelligenceSnapshot } from '../types/intelligence';
 import { AIAnalysisCard } from './ai/AIAnalysisCard';
@@ -229,7 +228,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div className="stat-label">This Week</div>
-                {weekSummary.changePercent !== null && (
+                {weekSummary.changePercent !== null && weekSummary.changePercent !== undefined && (
                   <span className={`badge ${weekSummary.changePercent >= 0 ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: 10 }}>
                     {weekSummary.changePercent >= 0 ? '+' : ''}{weekSummary.changePercent}%
                   </span>

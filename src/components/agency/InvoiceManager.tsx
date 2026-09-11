@@ -5,12 +5,12 @@
 
 import { useState } from 'react';
 import {
-  Plus, DollarSign, CreditCard, Clock, CheckCircle2, AlertTriangle, X,
+  Plus, DollarSign, CreditCard, Clock, CheckCircle2, AlertTriangle,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';
 import type { AgencyInvoice, AgencyClient, AgencyProject, InvoiceStatus } from '../../types';
-import { generateId, now, formatINR, formatDate, timeAgo } from '../../utils/helpers';
+import { generateId, now, formatINR, formatDate } from '../../utils/helpers';
 import { showToast } from '../Toast';
 import type { AgencyKpiSummary } from '../../services/agencyKpi';
 

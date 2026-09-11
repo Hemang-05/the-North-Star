@@ -43,7 +43,6 @@ export function CareerCapitalView() {
   const { items: assets, loading } = useStore<CareerCapital>(STORES.CAREER_CAPITAL);
 
   const [selectedType, setSelectedType] = useState<string>('ALL');
-  const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingAsset, setEditingAsset] = useState<CareerCapital | null>(null);
 
@@ -142,9 +141,7 @@ export function CareerCapitalView() {
   };
 
   const filtered = assets.filter((a) => {
-    const matchesType = selectedType === 'ALL' || a.assetType === selectedType;
-    const matchesStatus = selectedStatus === 'ALL' || a.status === selectedStatus;
-    return matchesType && matchesStatus;
+    return selectedType === 'ALL' || a.assetType === selectedType;
   });
 
   return (

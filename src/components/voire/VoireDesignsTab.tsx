@@ -4,8 +4,8 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Palette, Plus, Trash2, Edit2, ExternalLink, CheckCircle, Clock } from 'lucide-react';
-import type { VoireDesign, VoireDesignStatus } from '../../types/pillars';
+import { Palette, Plus, Trash2, Edit2, ExternalLink } from 'lucide-react';
+import type { VoireDesign, VoireDesignStage } from '../../types/pillars';
 import { dbPut, dbDelete, STORES } from '../../services/db';
 import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
 import { showToast } from '../Toast';
@@ -21,7 +21,7 @@ export function VoireDesignsTab({ designs }: VoireDesignsTabProps) {
 
   const [name, setName] = useState('');
   const [theme, setTheme] = useState('');
-  const [status, setStatus] = useState<VoireDesignStatus>('DRAFT');
+  const [status, setStatus] = useState<VoireDesignStage>('CONCEPT');
   const [techPackUrl, setTechPackUrl] = useState('');
   const [estimatedProductionCost, setEstimatedProductionCost] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
@@ -30,7 +30,7 @@ export function VoireDesignsTab({ designs }: VoireDesignsTabProps) {
     setEditingDesign(null);
     setName('');
     setTheme('');
-    setStatus('DRAFT');
+    setStatus('CONCEPT');
     setTechPackUrl('');
     setEstimatedProductionCost('');
     setNotes('');
@@ -39,11 +39,11 @@ export function VoireDesignsTab({ designs }: VoireDesignsTabProps) {
 
   const openEditModal = (design: VoireDesign) => {
     setEditingDesign(design);
-    setName(design.name);
+    setName(design.name || design.title || '');
     setTheme(design.theme || '');
-    setStatus(design.status);
+    setStatus((design.stage || design.status || 'CONCEPT') as VoireDesignStage);
     setTechPackUrl(design.techPackUrl || '');
-    setEstimatedProductionCost(design.estimatedProductionCost || '');
+    setEstimatedProductionCost(design.estimatedProductionCost !== undefined ? design.estimatedProductionCost : '');
     setNotes(design.notes || '');
     setShowModal(true);
   };
@@ -137,13 +137,13 @@ export function VoireDesignsTab({ designs }: VoireDesignsTabProps) {
               {designs.map((design) => (
                 <tr key={design.id}>
                   <td>
-                    <div style={{ fontWeight: 600, color: '#ffffff' }}>{design.name}</div>
+                    <div style={{ fontWeight: 600, color: '#ffffff' }}>{design.name || design.title || 'Untitled Design'}</div>
                     {design.notes && <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>{design.notes}</div>}
                   </td>
                   <td>{design.theme || '—'}</td>
                   <td>
-                    <span className={`voire-badge ${design.status.toLowerCase().replace(/_/g, '-')}`}>
-                      {design.status.replace(/_/g, ' ')}
+                    <span className={`voire-badge ${(design.status || design.stage || 'CONCEPT').toLowerCase().replace(/_/g, '-')}`}>
+                      {(design.status || design.stage || 'CONCEPT').replace(/_/g, ' ')}
                     </span>
                   </td>
                   <td>{design.estimatedProductionCost ? formatINR(design.estimatedProductionCost) : '—'}</td>
@@ -166,7 +166,7 @@ export function VoireDesignsTab({ designs }: VoireDesignsTabProps) {
                       <button className="voire-btn-secondary" style={{ padding: '0.375rem 0.5rem' }} onClick={() => openEditModal(design)}>
                         <Edit2 size={14} />
                       </button>
-                      <button className="voire-btn-danger" onClick={() => handleDelete(design.id, design.name)}>
+                      <button className="voire-btn-danger" onClick={() => handleDelete(design.id, design.name || design.title || 'design')}>
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -213,7 +213,7 @@ export function VoireDesignsTab({ designs }: VoireDesignsTabProps) {
                 <select
                   className="voire-form-select"
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as VoireDesignStatus)}
+                  onChange={(e) => setStatus(e.target.value as VoireDesignStage)}
                 >
                   <option value="DRAFT">DRAFT (Ideation / Vector Art)</option>
                   <option value="SAMPLING">SAMPLING (Sample with Manufacturer)</option>

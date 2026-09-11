@@ -37,7 +37,7 @@ describe('VOIRE Status Engine & Heuristics', () => {
 
     const kpis = computeVoireKpiSummary(designs, [], [], [], [], [], []);
     const status = evaluateVoireStatus(kpis, []);
-    expect(status.verdict).toBe('NEEDS_ATTENTION');
+    expect(status.verdict).toBe('AT_RISK');
     expect(status.headline).toContain('Sampling Pipeline Bottleneck');
   });
 
@@ -54,7 +54,7 @@ describe('VOIRE Status Engine & Heuristics', () => {
 
     const kpis = computeVoireKpiSummary([], [], drops, [], [], [], []);
     const status = evaluateVoireStatus(kpis, []);
-    expect(status.verdict).toBe('NEEDS_ATTENTION');
+    expect(status.verdict).toBe('AT_RISK');
     expect(status.headline).toContain('Drop Execution Bottleneck');
   });
 
@@ -74,7 +74,7 @@ describe('VOIRE Status Engine & Heuristics', () => {
 
     const kpis = computeVoireKpiSummary([], [], [], [], [], campaigns, []);
     const status = evaluateVoireStatus(kpis, []);
-    expect(status.verdict).toBe('NEEDS_ATTENTION');
+    expect(status.verdict).toBe('AT_RISK');
     expect(status.headline).toContain('Marketing Acquisition Leak');
   });
 

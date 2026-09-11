@@ -5,8 +5,7 @@
 
 import { useState } from 'react';
 import {
-  Plus, Tag, CheckCircle2, Clock, Trash2, X, Send,
-  RotateCcw, Sparkles, FileText,
+  Plus, Tag, Trash2, X, Send,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';

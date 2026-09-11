@@ -13,31 +13,19 @@ import {
   Sparkles,
   Target,
   Clock,
-  Plus,
   Play,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle2,
-  FileText,
   Activity,
   Zap,
-  Layers,
-  ChevronRight,
 } from 'lucide-react';
 import { useStore, useDataChangeListener, useActiveTimer } from '../../hooks/useDatabase';
 import { dbGetAll, STORES } from '../../services/db';
 import type {
   JobOpportunity,
-  JobApplication,
-  JobOutreach,
-  CareerCapital,
   Goal,
   ActivityEvent,
-  FocusSession,
 } from '../../types';
 import {
   loadJobHuntKpiSummary,
-  calculateJobHuntKpis,
   type JobHuntKpiSummary,
 } from '../../services/jobHuntKpi';
 import {
@@ -53,7 +41,6 @@ import {
 import {
   formatDuration,
   formatSafePercent,
-  formatINR,
   timeAgo,
   formatDate,
 } from '../../utils/helpers';
@@ -72,7 +59,7 @@ interface JobHuntDashboardProps {
 
 type TabType = 'PIPELINE' | 'OUTREACH' | 'ASSETS' | 'GOALS' | 'AI_REVIEW' | 'ACTIVITY';
 
-export function JobHuntDashboard({ onNavigate }: JobHuntDashboardProps) {
+export function JobHuntDashboard({ onNavigate: _onNavigate }: JobHuntDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('PIPELINE');
   const [kpis, setKpis] = useState<JobHuntKpiSummary | null>(null);
   const [statusEval, setStatusEval] = useState<StatusEvaluation | null>(null);
@@ -80,8 +67,6 @@ export function JobHuntDashboard({ onNavigate }: JobHuntDashboardProps) {
 
   // Raw data stores
   const { items: opportunities } = useStore<JobOpportunity>(STORES.JOB_OPPORTUNITIES);
-  const { items: applications } = useStore<JobApplication>(STORES.JOB_APPLICATIONS);
-  const { items: goals } = useStore<Goal>(STORES.GOALS);
   const { items: events } = useStore<ActivityEvent>(STORES.EVENTS);
 
   // Modals
@@ -413,7 +398,7 @@ export function JobHuntDashboard({ onNavigate }: JobHuntDashboardProps) {
             setQuickApplyInitialOpp(opp || null);
             setShowQuickApply(true);
           }}
-          onOpenOutreach={(opp) => {
+          onOpenOutreach={() => {
             setActiveTab('OUTREACH');
           }}
         />

@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Sparkles, Plus, Trash2, Edit2, Calendar, Target } from 'lucide-react';
+import { Sparkles, Plus, Trash2, Edit2 } from 'lucide-react';
 import type { VoireDrop, VoireDropStatus, VoireProduct } from '../../types/pillars';
 import { dbPut, dbDelete, STORES } from '../../services/db';
 import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
@@ -46,7 +46,8 @@ export function VoireDropsTab({ drops, products }: VoireDropsTabProps) {
     setEditingDrop(drop);
     setName(drop.name);
     setTheme(drop.theme || '');
-    setStatus(drop.status);
+    const validStatuses: VoireDropStatus[] = ['PLANNING', 'DESIGNING', 'SCHEDULED', 'LIVE', 'ENDED', 'CANCELLED'];
+    setStatus(validStatuses.includes(drop.status as VoireDropStatus) ? (drop.status as VoireDropStatus) : 'PLANNING');
     setScheduledAt(drop.scheduledAt ? drop.scheduledAt.slice(0, 16) : '');
     setEndedAt(drop.endedAt ? drop.endedAt.slice(0, 16) : '');
     setTargetRevenue(drop.targetRevenue ?? '');

@@ -5,8 +5,8 @@
 // ============================================================================
 
 import {
-  ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle2,
-  TrendingDown, Flame, Zap, Award, BarChart3,
+  ShieldCheck, ShieldAlert, AlertTriangle,
+  Flame, Award, BarChart3,
 } from 'lucide-react';
 import type { ForexKpiSummary } from '../../services/forexKpi';
 import {

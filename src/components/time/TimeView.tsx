@@ -9,21 +9,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Clock, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
-  AlertTriangle, CheckCircle2, RefreshCw, BarChart2, Shield,
-  Layers, Target, DollarSign, Calendar
+  Clock, TrendingUp, ArrowUpRight, ArrowDownRight,
+  AlertTriangle, RefreshCw, BarChart2,
+  Layers
 } from 'lucide-react';
 import { generateIntelligenceSnapshot } from '../../services/intelligenceFacts';
-import { formatDuration, formatINR } from '../../utils/helpers';
 import type {
   TimePeriodType,
   IntelligenceSnapshot,
-  PillarTimeDetail,
-  AnomalyFact,
-  TrendFact,
 } from '../../types/intelligence';
 import { AIAnalysisCard } from '../ai/AIAnalysisCard';
-import type { AIAnalysisMode } from '../../types/ai';
 
 export function TimeView() {
   const [periodType, setPeriodType] = useState<TimePeriodType>('THIS_WEEK');

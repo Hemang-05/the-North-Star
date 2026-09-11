@@ -95,6 +95,21 @@ export function computeFitnessKpiSummary(
   const workoutIds = new Set(workouts.map((w) => w.id));
   const runIds = new Set(runs.map((r) => r.id));
 
+  const getFocusMinutes = (f: FocusSession | { durationMinutes?: number; durationSeconds?: number }): number => {
+    if (typeof (f as { durationMinutes?: number }).durationMinutes === 'number') {
+      return (f as { durationMinutes?: number }).durationMinutes!;
+    }
+    if (typeof f.durationSeconds === 'number') {
+      return Math.round(f.durationSeconds / 60);
+    }
+    return 0;
+  };
+
+  const getFocusDate = (f: FocusSession | { startTime?: string; startedAt?: string }): string => {
+    const ts = f.startedAt || (f as { startTime?: string }).startTime || '';
+    return ts.slice(0, 10);
+  };
+
   // Focus timer deduplication: ignore focus sessions that reference an already-logged workout or run
   const standaloneGymFocusMinutes = focusSessions
     .filter((f) => {
@@ -103,7 +118,7 @@ export function computeFitnessKpiSummary(
       const isLinked = f.projectRef && (workoutIds.has(f.projectRef) || runIds.has(f.projectRef));
       return isGym && !isLinked;
     })
-    .reduce((acc, f) => acc + f.durationMinutes, 0);
+    .reduce((acc, f) => acc + getFocusMinutes(f), 0);
 
   const standaloneFootballFocusMinutes = focusSessions
     .filter((f) => {
@@ -112,7 +127,7 @@ export function computeFitnessKpiSummary(
       const isLinked = f.projectRef && workoutIds.has(f.projectRef);
       return isFootball && !isLinked;
     })
-    .reduce((acc, f) => acc + f.durationMinutes, 0);
+    .reduce((acc, f) => acc + getFocusMinutes(f), 0);
 
   const standaloneMobilityFocusMinutes = focusSessions
     .filter((f) => {
@@ -121,7 +136,7 @@ export function computeFitnessKpiSummary(
       const isLinked = f.projectRef && workoutIds.has(f.projectRef);
       return isMobility && !isLinked;
     })
-    .reduce((acc, f) => acc + f.durationMinutes, 0);
+    .reduce((acc, f) => acc + getFocusMinutes(f), 0);
 
   // Segregate WorkoutSession durations by workoutType
   let gymDurationMinutes = standaloneGymFocusMinutes;
@@ -217,8 +232,10 @@ export function computeFitnessKpiSummary(
   for (const f of focusSessions) {
     const cat = f.category?.toLowerCase() || '';
     if (cat === 'mental' || cat === 'chess' || cat === 'sudoku' || cat === 'study') {
-      const date = f.startTime.slice(0, 10);
-      mentalFocusByDate[date] = (mentalFocusByDate[date] || 0) + (f.durationMinutes || 0);
+      const date = getFocusDate(f);
+      if (date) {
+        mentalFocusByDate[date] = (mentalFocusByDate[date] || 0) + getFocusMinutes(f);
+      }
     }
   }
 

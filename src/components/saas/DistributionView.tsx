@@ -5,8 +5,10 @@
 
 import { useState } from 'react';
 import {
-  Plus, Share2, MessageSquare, Megaphone, Users, Globe,
-  Filter, Trash2, X, Send, BarChart2,
+  Plus,
+  Filter,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';
@@ -48,7 +50,7 @@ const ACTIVITY_TYPES: DistributionActivityType[] = [
   'OTHER',
 ];
 
-export function DistributionView({ distribution, distributionFocusSeconds }: DistributionViewProps) {
+export function DistributionView({ distribution, distributionFocusSeconds: _distributionFocusSeconds }: DistributionViewProps) {
   const { add, remove } = useStore<SaasDistributionActivity>(STORES.SAAS_DISTRIBUTION);
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterChannel, setFilterChannel] = useState<string>('ALL');

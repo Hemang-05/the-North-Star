@@ -5,9 +5,9 @@
 // ============================================================================
 
 import { loadJobHuntKpiSummary } from './jobHuntKpi';
-import { loadAgencyKpiSummary, type AgencyKpiSummary } from './agencyKpi';
-import { loadSaasKpiSummary, type SaasKpiSummary } from './saasKpi';
-import { loadForexKpiSummary, type ForexKpiSummary } from './forexKpi';
+import { loadAgencyKpiSummary } from './agencyKpi';
+import { loadSaasKpiSummary } from './saasKpi';
+import { loadForexKpiSummary } from './forexKpi';
 import { loadFitnessKpiSummary } from './fitnessKpi';
 import { loadVoireKpiSummary } from './voireKpi';
 import {
@@ -23,21 +23,10 @@ import type {
   Goal,
   JobOpportunity,
   JobOutreach,
-  ActivityEvent,
   AgencyClient,
-  AgencyLead,
   AgencyInvoice,
   SaasFeature,
   SaasFeedback,
-  SaasRelease,
-  FitnessKpiSummary,
-  VoireKpiSummary,
-  VoireDesign,
-  VoireProduct,
-  VoireDrop,
-  VoireOrder,
-  VoireOrderItem,
-  VoireMarketingCampaign,
 } from '../types';
 import { formatDuration, formatSafePercent, formatINR } from '../utils/helpers';
 
@@ -305,11 +294,10 @@ export interface AgencyAiFacts {
  * Deterministically assemble Agency facts.
  */
 export async function buildAgencyAiFacts(): Promise<AgencyAiFacts> {
-  const [kpis, allGoals, clients, leads, invoices] = await Promise.all([
+  const [kpis, allGoals, clients, invoices] = await Promise.all([
     loadAgencyKpiSummary(),
     dbGetAll<Goal>(STORES.GOALS),
     dbGetAll<AgencyClient>(STORES.AGENCY_CLIENTS),
-    dbGetAll<AgencyLead>(STORES.AGENCY_LEADS),
     dbGetAll<AgencyInvoice>(STORES.AGENCY_INVOICES),
   ]);
 
@@ -675,7 +663,6 @@ export function generateOfflineSaasAudit(facts: SaasAiFacts): string {
     business,
     balance,
     feedback,
-    focusTime,
     activeGoals,
   } = facts;
 

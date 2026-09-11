@@ -5,13 +5,13 @@
 
 import { useState } from 'react';
 import {
-  Plus, ChevronRight, Users, Filter, ArrowRight, UserCheck, X, Trash2,
+  Plus, Users, ArrowRight, UserCheck, X, Trash2,
 } from 'lucide-react';
-import { useStore, logEvent, notifyDataChange } from '../../hooks/useDatabase';
-import { dbPut, STORES } from '../../services/db';
+import { useStore, logEvent } from '../../hooks/useDatabase';
+import { STORES } from '../../services/db';
 import type { AgencyLead, AgencyClient, LeadStage } from '../../types';
 import { ALL_LEAD_STAGES, ACTIVE_LEAD_STAGES } from '../../services/agencyKpi';
-import { generateId, now, formatINR, timeAgo, formatDate } from '../../utils/helpers';
+import { generateId, now, formatINR, timeAgo } from '../../utils/helpers';
 import { showToast } from '../Toast';
 
 interface LeadManagerProps {
@@ -30,7 +30,7 @@ const PIPELINE_COLUMNS: { stage: LeadStage; label: string; color: string }[] = [
   { stage: 'WON', label: 'Won ✓', color: '#22c55e' },
 ];
 
-export function LeadManager({ leads, clients, onConvertToClient }: LeadManagerProps) {
+export function LeadManager({ leads, clients: _clients, onConvertToClient }: LeadManagerProps) {
   const { add, update, remove } = useStore<AgencyLead>(STORES.AGENCY_LEADS);
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewMode, setViewMode] = useState<'KANBAN' | 'TABLE'>('KANBAN');

@@ -5,8 +5,8 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Target, Plus, Trash2, CheckCircle2, TrendingUp, Sparkles, Award } from 'lucide-react';
-import type { Goal, CadenceType } from '../../types';
+import { Target, Plus, Trash2, Sparkles, CheckCircle2 } from 'lucide-react';
+import type { Goal, GoalCadence } from '../../types';
 import type { FitnessKpiSummary } from '../../types/pillars';
 import { dbPut, dbDelete, STORES } from '../../services/db';
 import { notifyDataChange } from '../../hooks/useDatabase';
@@ -19,7 +19,7 @@ interface FitnessGoalsTabProps {
 
 interface GoalTemplate {
   title: string;
-  cadence: CadenceType;
+  cadence: GoalCadence;
   targetValue: number;
   unit: string;
   description: string;
@@ -80,7 +80,7 @@ const OPTIONAL_TEMPLATES: GoalTemplate[] = [
 export function FitnessGoalsTab({ goals, kpis }: FitnessGoalsTabProps) {
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
-  const [cadence, setCadence] = useState<CadenceType>('WEEKLY');
+  const [cadence, setCadence] = useState<GoalCadence>('WEEKLY');
   const [targetValue, setTargetValue] = useState<number | ''>(1);
   const [unit, setUnit] = useState('runs');
 
@@ -96,7 +96,7 @@ export function FitnessGoalsTab({ goals, kpis }: FitnessGoalsTabProps) {
       if (titleLower.includes('side') || titleLower.includes('per side')) {
         current = kpis.benchPressMaxPerSideKg;
       } else {
-        current = kpis.benchPressPeakTotalKg ?? (kpis.benchPressMaxPerSideKg > 0 ? kpis.benchPressMaxPerSideKg * 2 + 20 : 0);
+        current = kpis.benchPressMaxKg ?? (kpis.benchPressMaxPerSideKg > 0 ? kpis.benchPressMaxPerSideKg * 2 + 20 : 0);
       }
     } else if (titleLower.includes('5 km') || titleLower.includes('5k')) {
       current = goal.cadence === 'WEEKLY' ? kpis.fiveKmRunsThisWeek : kpis.fiveKmRunsCount;
@@ -135,6 +135,9 @@ export function FitnessGoalsTab({ goals, kpis }: FitnessGoalsTabProps) {
         targetType: 'COUNT',
         targetValue: template.targetValue,
         currentValue: initialVal,
+        currentComputedValue: initialVal,
+        weight: 1.0,
+        isActive: true,
         unit: template.unit,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -168,6 +171,9 @@ export function FitnessGoalsTab({ goals, kpis }: FitnessGoalsTabProps) {
         targetType: 'COUNT',
         targetValue: numTarget,
         currentValue: 0,
+        currentComputedValue: 0,
+        weight: 1.0,
+        isActive: true,
         unit: unit.trim(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -371,7 +377,7 @@ export function FitnessGoalsTab({ goals, kpis }: FitnessGoalsTabProps) {
                   </label>
                   <select
                     value={cadence}
-                    onChange={(e) => setCadence(e.target.value as CadenceType)}
+                    onChange={(e) => setCadence(e.target.value as GoalCadence)}
                     className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-red-500 outline-none"
                   >
                     <option value="DAILY">Daily</option>

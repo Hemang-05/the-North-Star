@@ -6,14 +6,14 @@
 
 import { useState } from 'react';
 import {
-  Microscope, Plus, CheckCircle2, AlertTriangle, Trash2,
-  TrendingUp, Calendar, Clock, BarChart3, HelpCircle,
+  Microscope, Plus, Trash2,
+  TrendingUp, BarChart3, HelpCircle,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';
 import type { ForexBacktestBatch, ForexSetup } from '../../types';
 import type { ForexKpiSummary } from '../../services/forexKpi';
-import { generateId, now, formatDate, safePct, formatSafePercent } from '../../utils/helpers';
+import { generateId, now, safePct, formatSafePercent } from '../../utils/helpers';
 import { showToast } from '../Toast';
 
 interface ForexBacktestTabProps {
@@ -91,7 +91,7 @@ export function ForexBacktestTab({ kpis }: ForexBacktestTabProps) {
       wins,
       losses,
       breakevens,
-      winRate: calculatedWinRate, // system-calculated
+      winRate: calculatedWinRate ?? 0, // system-calculated
       recordedExpectancyR: parsedExpectancy, // explicitly entered
       expectancyR: parsedExpectancy,
       ruleViolations: Number(form.ruleViolations) || 0,

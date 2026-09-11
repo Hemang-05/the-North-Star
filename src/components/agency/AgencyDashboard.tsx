@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Building2, Users, CreditCard, Target, TrendingUp, Zap, Activity, Play, Plus,
-  Clock, FileText, DollarSign,
+  Clock,
 } from 'lucide-react';
 import { useStore, useDataChangeListener, useActiveTimer, logEvent, notifyDataChange } from '../../hooks/useDatabase';
 import { dbGetAll, dbPut, STORES } from '../../services/db';
@@ -30,7 +30,7 @@ import {
   generateOfflineAgencyAudit,
   type AgencyAiFacts,
 } from '../../services/aiContext';
-import { formatDuration, formatINR, formatSafePercent, timeAgo, formatDate, generateId, now } from '../../utils/helpers';
+import { formatDuration, formatINR, timeAgo, formatDate, generateId, now } from '../../utils/helpers';
 import { showToast } from '../Toast';
 import { LeadManager } from './LeadManager';
 import { ClientProjectManager } from './ClientProjectManager';
@@ -46,11 +46,10 @@ interface AgencyDashboardProps {
 
 type TabType = 'PIPELINE' | 'CLIENTS' | 'INVOICES' | 'GOALS' | 'MATURITY' | 'AI_REVIEW' | 'ACTIVITY';
 
-export function AgencyDashboard({ onNavigate }: AgencyDashboardProps) {
+export function AgencyDashboard({ onNavigate: _onNavigate }: AgencyDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('PIPELINE');
   const [kpis, setKpis] = useState<AgencyKpiSummary | null>(null);
   const [statusEval, setStatusEval] = useState<StatusEvaluation | null>(null);
-  const [loading, setLoading] = useState(true);
 
   // Data stores
   const { items: clients } = useStore<AgencyClient>(STORES.AGENCY_CLIENTS);
@@ -58,7 +57,7 @@ export function AgencyDashboard({ onNavigate }: AgencyDashboardProps) {
   const { items: leads } = useStore<AgencyLead>(STORES.AGENCY_LEADS);
   const { items: invoices } = useStore<AgencyInvoice>(STORES.AGENCY_INVOICES);
   const { items: events } = useStore<ActivityEvent>(STORES.EVENTS);
-  const { items: goals } = useStore<Goal>(STORES.GOALS);
+  useStore<Goal>(STORES.GOALS);
 
   // AI state
   const [aiFacts, setAiFacts] = useState<AgencyAiFacts | null>(null);
@@ -83,8 +82,6 @@ export function AgencyDashboard({ onNavigate }: AgencyDashboardProps) {
       setStatusEval(evalResult);
     } catch (err) {
       console.error('Error computing Agency KPIs:', err);
-    } finally {
-      setLoading(false);
     }
   }, []);
 

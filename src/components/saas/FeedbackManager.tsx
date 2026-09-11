@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import {
-  Plus, MessageSquare, AlertCircle, Bug, Sparkles, CheckCircle2,
+  Plus, MessageSquare, AlertCircle, Bug, Sparkles,
   Filter, Trash2, X, Link, Check,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
@@ -17,7 +17,7 @@ import type {
   FeedbackSeverity,
   FeedbackStatus,
 } from '../../types';
-import { generateId, now, formatDate } from '../../utils/helpers';
+import { generateId, now } from '../../utils/helpers';
 import { showToast } from '../Toast';
 
 interface FeedbackManagerProps {

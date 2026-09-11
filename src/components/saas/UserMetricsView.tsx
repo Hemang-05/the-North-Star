@@ -5,8 +5,8 @@
 
 import { useState } from 'react';
 import {
-  Plus, Users, DollarSign, UserCheck, TrendingUp,
-  Percent, ArrowUpRight, Trash2, X, Calendar,
+  Plus,
+  Trash2, X,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';
@@ -116,7 +116,7 @@ export function UserMetricsView({ snapshots }: UserMetricsViewProps) {
               {latest.totalUsers}
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 2 }}>
-              {latest.activeUsers} active ({formatSafePercent(latest.activationRate)})
+              {latest.activeUsers} active ({formatSafePercent(latest.activationRate ?? null)})
             </div>
           </div>
 
@@ -152,7 +152,7 @@ export function UserMetricsView({ snapshots }: UserMetricsViewProps) {
               {latest.churnedUsers}
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 2 }}>
-              Retention: {formatSafePercent(latest.retentionRate)}
+              Retention: {formatSafePercent(latest.retentionRate ?? null)}
             </div>
           </div>
         </div>

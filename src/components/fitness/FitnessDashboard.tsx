@@ -12,8 +12,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Flame, Dumbbell, Footprints, Trophy, Utensils, Moon,
-  Target, Sparkles, Activity, Clock, Award, ShieldAlert,
-  RefreshCw, CheckCircle2, ChevronRight, BarChart2,
+  Target, Sparkles, Activity, Clock, Award,
+  RefreshCw, ChevronRight, BarChart2,
 } from 'lucide-react';
 import { useStore, useDataChangeListener } from '../../hooks/useDatabase';
 import { dbGetAll, STORES } from '../../services/db';
@@ -61,7 +61,7 @@ type TabType =
   | 'AI_AUDIT'
   | 'ACTIVITY';
 
-export function FitnessDashboard({ onNavigate }: FitnessDashboardProps) {
+export function FitnessDashboard({ onNavigate: _onNavigate }: FitnessDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('OVERVIEW');
   const [kpis, setKpis] = useState<FitnessKpiSummary | null>(null);
   const [statusEval, setStatusEval] = useState<StatusEvaluation | null>(null);

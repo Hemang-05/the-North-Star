@@ -4,11 +4,10 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Target, Plus, Check, Edit2, Trash2, TrendingUp, Sparkles } from 'lucide-react';
+import { Target, Plus, Edit2, Trash2, Sparkles } from 'lucide-react';
 import { useGoals } from '../../hooks/useDatabase';
 import type { Goal, GoalCadence, GoalTargetType } from '../../types';
 import type { JobHuntKpiSummary } from '../../services/jobHuntKpi';
-import { formatSafePercent, safePct } from '../../utils/helpers';
 import { showToast } from '../Toast';
 
 interface JobHuntGoalsProps {

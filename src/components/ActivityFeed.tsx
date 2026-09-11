@@ -4,10 +4,10 @@
 // ============================================================================
 
 import { useState, useMemo } from 'react';
-import { Activity, Filter, Clock } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { useRecentEvents } from '../hooks/useDatabase';
 import { PILLARS, PILLAR_MAP } from '../config/pillars';
-import { timeAgo, formatTime, formatINR } from '../utils/helpers';
+import { timeAgo, formatINR } from '../utils/helpers';
 import type { ActivityEvent, PillarSlug } from '../types';
 
 type TimeFilter = 'ALL' | 'TODAY' | '7D' | '30D';

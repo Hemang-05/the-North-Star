@@ -13,19 +13,14 @@ import {
   LayoutGrid,
   List as ListIcon,
   ExternalLink,
-  ChevronRight,
   Edit2,
   Trash2,
   Send,
   MessageSquare,
-  Sparkles,
-  MapPin,
-  Clock,
-  DollarSign,
   Calendar,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { useStore, logEvent, notifyDataChange } from '../../hooks/useDatabase';
+import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
 import { dbPut, dbDelete, dbGetAll, STORES } from '../../services/db';
 import type {
   JobOpportunity,
@@ -36,7 +31,7 @@ import type {
   InterviewOutcome,
 } from '../../types';
 import { ALL_JOB_STAGES } from '../../services/jobHuntKpi';
-import { generateId, now, timeAgo, formatDate, formatINR, todayDate } from '../../utils/helpers';
+import { generateId, now, timeAgo, formatINR, todayDate } from '../../utils/helpers';
 import { showToast } from '../Toast';
 import { QuickApplyForm } from './QuickApplyForm';
 

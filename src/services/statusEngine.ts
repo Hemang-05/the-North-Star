@@ -4,13 +4,12 @@
 // for pillars and specific goals based on real activity and metrics.
 // ============================================================================
 
-import type { StatusVerdict, Goal, PillarSlug } from '../types';
+import type { StatusVerdict, Goal, FitnessKpiSummary, VoireKpiSummary } from '../types';
 import type { JobHuntKpiSummary } from './jobHuntKpi';
 import type { AgencyKpiSummary } from './agencyKpi';
 import type { SaasKpiSummary } from './saasKpi';
 import { type ForexKpiSummary, CRITICAL_MISTAKE_COUNT_THRESHOLD } from './forexKpi';
-import type { FitnessKpiSummary } from './fitnessKpi';
-import { type VoireKpiSummary, isWeekendCalendarDay } from './voireKpi';
+import { isWeekendCalendarDay } from './voireKpi';
 import { safePct } from '../utils/helpers';
 
 export interface StatusEvaluation {
@@ -1077,7 +1076,7 @@ export function evaluateVoireStatus(
   // Precedence 2: Marketing Acquisition Leak
   if (kpis.marketingSpend > 0 && kpis.paidOrdersCount === 0) {
     return {
-      verdict: 'NEEDS_ATTENTION',
+      verdict: 'AT_RISK',
       headline: 'Marketing Acquisition Leak',
       reason: `₹${kpis.marketingSpend.toLocaleString('en-IN')} committed to marketing campaigns with zero paid customer orders. Inspect campaign creative or conversion funnel.`,
       score: 35,
@@ -1088,7 +1087,7 @@ export function evaluateVoireStatus(
   // Precedence 3: Drop Execution Bottleneck
   if (kpis.activeDrops > 0 && kpis.activeProducts === 0) {
     return {
-      verdict: 'NEEDS_ATTENTION',
+      verdict: 'AT_RISK',
       headline: 'Drop Execution Bottleneck',
       reason: 'Active or scheduled drop exists without assigned active catalog products. Assign SKUs before drop launch.',
       score: 40,
@@ -1099,7 +1098,7 @@ export function evaluateVoireStatus(
   // Precedence 4: Sampling Pipeline Bottleneck
   if (kpis.totalDesigns > 0 && kpis.readyOrSampledDesigns === 0) {
     return {
-      verdict: 'NEEDS_ATTENTION',
+      verdict: 'AT_RISK',
       headline: 'Sampling Pipeline Bottleneck',
       reason: `${kpis.totalDesigns} design concepts exist, but none have completed sampling or sample approval. Order physical samples or finalize tech packs before scheduling drops.`,
       score: 45,

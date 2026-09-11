@@ -8,17 +8,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  TrendingUp, BookOpen, Compass, Microscope, LineChart,
-  ShieldCheck, Target, Sparkles, Activity, Play, Plus,
-  Layers, CheckCircle2, Clock, Calendar, Flame, AlertTriangle,
-  RefreshCw, Award, ArrowRight,
+  BookOpen, Compass, Microscope, LineChart,
+  ShieldCheck, Target, Sparkles, Activity, Play,
+  Layers, CheckCircle2, Clock, Flame,
+  RefreshCw,
 } from 'lucide-react';
 import {
   useStore,
   useDataChangeListener,
   useActiveTimer,
-  logEvent,
-  notifyDataChange,
 } from '../../hooks/useDatabase';
 import { dbGetAll, STORES } from '../../services/db';
 import type {
@@ -44,7 +42,6 @@ import {
   formatDuration,
   formatSafePercent,
   formatDate,
-  timeAgo,
 } from '../../utils/helpers';
 import { showToast } from '../Toast';
 import { ForexStudyTab } from './ForexStudyTab';
@@ -97,7 +94,7 @@ export function ForexDashboard({ onNavigate }: ForexDashboardProps) {
   const { items: events } = useStore<ActivityEvent>(STORES.EVENTS);
 
   // AI State
-  const [aiFacts, setAiFacts] = useState<ForexAiFacts | null>(null);
+  const [, setAiFacts] = useState<ForexAiFacts | null>(null);
   const [strategicAudit, setStrategicAudit] = useState<string>('');
   const [loadingAi, setLoadingAi] = useState(false);
 
@@ -432,7 +429,7 @@ export function ForexDashboard({ onNavigate }: ForexDashboardProps) {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
-                  {LEARNING_LOOP_STEPS.map((s, idx) => {
+                  {LEARNING_LOOP_STEPS.map((s) => {
                     const isPassed =
                       (s.step === 1 && kpis.totalStudySessions > 0) ||
                       (s.step === 2 && kpis.totalStudyMinutes >= 180) ||

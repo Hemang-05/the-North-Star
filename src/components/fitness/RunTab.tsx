@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Footprints, Plus, Award, Trash2, Calendar, Clock, Gauge, Flame } from 'lucide-react';
+import { Footprints, Plus, Award, Trash2, Calendar, Clock, Gauge } from 'lucide-react';
 import type { RunLog } from '../../types/pillars';
 import { dbPut, dbDelete, STORES } from '../../services/db';
 import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
@@ -20,7 +20,7 @@ export function RunTab({ runs }: RunTabProps) {
   const [distanceKm, setDistanceKm] = useState<number | ''>(5.0);
   const [durationMinutes, setDurationMinutes] = useState<number | ''>(28);
   const [durationSecondsRemaining, setDurationSecondsRemaining] = useState<number | ''>(0);
-  const [heartRateAvg, setHeartRateAvg] = useState<number | ''>('');
+  const [heartRateAvg] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
   const [startedAt, setStartedAt] = useState(new Date().toISOString().slice(0, 16));
 

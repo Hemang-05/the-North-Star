@@ -5,7 +5,7 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Send, Plus, Briefcase, Sparkles, CheckCircle } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { dbPut, STORES } from '../../services/db';
 import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
 import { generateId, now } from '../../utils/helpers';

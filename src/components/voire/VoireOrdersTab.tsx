@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { ShoppingCart, Plus, Trash2, Edit2, CheckCircle2, AlertTriangle, Eye, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import type {
   VoireOrder,
   VoireOrderItem,
@@ -14,7 +14,7 @@ import type {
   VoirePaymentStatus,
   VoireFulfillmentStatus,
 } from '../../types/pillars';
-import { dbPut, dbDelete, dbGetByIndex, STORES } from '../../services/db';
+import { dbPut, dbDelete, STORES } from '../../services/db';
 import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
 import { showToast } from '../Toast';
 import { formatINR, formatDate } from '../../utils/helpers';
@@ -36,7 +36,7 @@ interface DraftLineItem {
 
 export function VoireOrdersTab({ orders, orderItems, products, drops, campaigns }: VoireOrdersTabProps) {
   const [showModal, setShowModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<VoireOrder | null>(null);
+  const [, setSelectedOrder] = useState<VoireOrder | null>(null);
 
   // Form states
   const [customerName, setCustomerName] = useState('');
@@ -295,7 +295,7 @@ export function VoireOrdersTab({ orders, orderItems, products, drops, campaigns 
                       <div style={{ fontWeight: 600, color: '#ffffff', fontFamily: 'monospace' }}>{order.orderNumber}</div>
                       {order.customerName && <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{order.customerName}</div>}
                     </td>
-                    <td style={{ fontSize: '0.8125rem', color: '#9ca3af' }}>{formatDate(order.orderDate)}</td>
+                    <td style={{ fontSize: '0.8125rem', color: '#9ca3af' }}>{formatDate(order.orderDate || order.createdAt)}</td>
                     <td>
                       <div style={{ fontSize: '0.8125rem', color: '#e5e7eb' }}>
                         {itemsForThisOrder.length > 0
@@ -322,8 +322,8 @@ export function VoireOrdersTab({ orders, orderItems, products, drops, campaigns 
                       </div>
                     </td>
                     <td>
-                      <span className={`voire-badge ${order.fulfillmentStatus.toLowerCase().replace(/_/g, '-')}`}>
-                        {order.fulfillmentStatus}
+                      <span className={`voire-badge ${(order.fulfillmentStatus || 'UNFULFILLED').toLowerCase().replace(/_/g, '-')}`}>
+                        {order.fulfillmentStatus || 'UNFULFILLED'}
                       </span>
                     </td>
                     <td>

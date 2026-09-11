@@ -4,12 +4,11 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Scale, Moon, Brain, Plus, Trash2, Calendar, Clock, AlertTriangle, Sparkles, TrendingDown, TrendingUp } from 'lucide-react';
+import { Scale, Moon, Brain, Plus, Trash2, Calendar, Clock, AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
 import type { DailyBioSnapshot } from '../../types/pillars';
 import { dbPut, dbDelete, STORES } from '../../services/db';
 import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
 import { calculateSleepDurationMins } from '../../services/fitnessKpi';
-import { formatDate } from '../../utils/helpers';
 import { showToast } from '../Toast';
 
 interface BioRecoveryTabProps {
@@ -36,7 +35,7 @@ export function BioRecoveryTab({
   const [weightKg, setWeightKg] = useState<number | ''>(latestWeightKg ?? 68.5);
   const [sleepBedtime, setSleepBedtime] = useState('23:30');
   const [sleepWaketime, setSleepWaketime] = useState('07:00');
-  const [manualDurationMins, setManualDurationMins] = useState<number | ''>('');
+  const [manualDurationMins] = useState<number | ''>('');
   const [sleepQuality, setSleepQuality] = useState<number | ''>(8);
   const [energyLevel, setEnergyLevel] = useState<number | ''>(8);
   const [chessSudokuMins, setChessSudokuMins] = useState<number | ''>(20);
