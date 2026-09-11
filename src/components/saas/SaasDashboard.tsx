@@ -156,12 +156,15 @@ export function SaasDashboard({ onNavigate: _onNavigate }: SaasDashboardProps) {
   }
 
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
       {/* 1. COMMAND CENTER HEADER */}
       <div className="card" style={{
         padding: 24,
         background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%)',
         border: '1px solid rgba(6, 182, 212, 0.25)',
+        minWidth: 0,
+        maxWidth: '100%',
+        boxSizing: 'border-box',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
           <div>
@@ -238,6 +241,7 @@ export function SaasDashboard({ onNavigate: _onNavigate }: SaasDashboardProps) {
         <div style={{
           display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
           gap: 8, marginTop: 18,
+          minWidth: 0, width: '100%',
         }}>
           <button
             className="btn btn-secondary btn-sm"
@@ -291,6 +295,7 @@ export function SaasDashboard({ onNavigate: _onNavigate }: SaasDashboardProps) {
             gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
             gap: 10, marginTop: 20, paddingTop: 16,
             borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            minWidth: 0, width: '100%',
           }}>
             {/* Product Velocity */}
             <div className="card" style={{ padding: '10px 12px', background: 'rgba(255, 255, 255, 0.02)' }}>
@@ -377,6 +382,7 @@ export function SaasDashboard({ onNavigate: _onNavigate }: SaasDashboardProps) {
         display: 'flex', gap: 6,
         borderBottom: '1px solid var(--border-subtle)',
         paddingBottom: 2, overflowX: 'auto',
+        minWidth: 0, maxWidth: '100%', width: '100%',
       }}>
         {[
           { id: 'PRODUCT', label: 'Product & Features', icon: Code2, count: features.length },

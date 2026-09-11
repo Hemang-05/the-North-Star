@@ -140,11 +140,11 @@ export function FeatureManager({ features, tests, onSelectFeature }: FeatureMana
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, maxWidth: '100%' }}>
       {/* TOOLBAR */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        flexWrap: 'wrap', gap: 12,
+        flexWrap: 'wrap', gap: 12, minWidth: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
@@ -192,11 +192,19 @@ export function FeatureManager({ features, tests, onSelectFeature }: FeatureMana
       {/* KANBAN VIEW */}
       {viewMode === 'KANBAN' && (
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: 12,
-          alignItems: 'start',
+          overflowX: 'auto',
+          paddingBottom: 16,
+          minWidth: 0,
+          maxWidth: '100%',
+          width: '100%',
         }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(6, minmax(220px, 1fr))',
+            gap: 12,
+            alignItems: 'start',
+            minWidth: 1100,
+          }}>
           {STATUS_COLUMNS.map((col) => {
             const colFeatures = filteredFeatures.filter((f) => f.status === col.status);
             return (
@@ -327,13 +335,14 @@ export function FeatureManager({ features, tests, onSelectFeature }: FeatureMana
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
       {/* TABLE VIEW */}
       {viewMode === 'LIST' && (
-        <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
+        <div className="card" style={{ overflowX: 'auto', padding: 0, minWidth: 0, maxWidth: '100%' }}>
+          <table style={{ width: '100%', minWidth: 680, borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)', textAlign: 'left' }}>
                 <th style={{ padding: '12px 16px' }}>Feature</th>

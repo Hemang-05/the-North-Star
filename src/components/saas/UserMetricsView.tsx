@@ -104,11 +104,11 @@ export function UserMetricsView({ snapshots }: UserMetricsViewProps) {
     : null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, maxWidth: '100%' }}>
       {/* LATEST METRIC HIGHLIGHTS */}
       {latest ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-          <div className="card" style={{ padding: 16, background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, minWidth: 0 }}>
+          <div className="card" style={{ padding: 16, background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.2)', minWidth: 0, maxWidth: '100%' }}>
             <div style={{ fontSize: '11px', color: '#3b82f6', fontWeight: 600, marginBottom: 2 }}>
               TOTAL USERS
             </div>
@@ -120,7 +120,7 @@ export function UserMetricsView({ snapshots }: UserMetricsViewProps) {
             </div>
           </div>
 
-          <div className="card" style={{ padding: 16, background: 'rgba(34, 197, 94, 0.05)', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+          <div className="card" style={{ padding: 16, background: 'rgba(34, 197, 94, 0.05)', border: '1px solid rgba(34, 197, 94, 0.2)', minWidth: 0, maxWidth: '100%' }}>
             <div style={{ fontSize: '11px', color: '#22c55e', fontWeight: 600, marginBottom: 2 }}>
               PAYING CUSTOMERS
             </div>
@@ -132,7 +132,7 @@ export function UserMetricsView({ snapshots }: UserMetricsViewProps) {
             </div>
           </div>
 
-          <div className="card" style={{ padding: 16, background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+          <div className="card" style={{ padding: 16, background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)', minWidth: 0, maxWidth: '100%' }}>
             <div style={{ fontSize: '11px', color: '#8b5cf6', fontWeight: 600, marginBottom: 2 }}>
               RECURRING REVENUE (MRR)
             </div>
@@ -144,7 +144,7 @@ export function UserMetricsView({ snapshots }: UserMetricsViewProps) {
             </div>
           </div>
 
-          <div className="card" style={{ padding: 16, background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+          <div className="card" style={{ padding: 16, background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)', minWidth: 0, maxWidth: '100%' }}>
             <div style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 600, marginBottom: 2 }}>
               CHURNED USERS
             </div>
@@ -183,8 +183,8 @@ export function UserMetricsView({ snapshots }: UserMetricsViewProps) {
       </div>
 
       {/* SNAPSHOTS TABLE */}
-      <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
+      <div className="card" style={{ overflowX: 'auto', padding: 0, minWidth: 0, maxWidth: '100%' }}>
+        <table style={{ width: '100%', minWidth: 640, borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)', textAlign: 'left' }}>
               <th style={{ padding: '12px 16px' }}>Date</th>

@@ -115,9 +115,9 @@ export function DistributionView({ distribution, distributionFocusSeconds: _dist
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, maxWidth: '100%' }}>
       {/* CHANNEL BREAKDOWN CARDS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, minWidth: 0 }}>
         {ALL_DISTRIBUTION_CHANNELS.map((ch) => {
           const cfg = CHANNEL_ICONS[ch];
           const count = channelCounts[ch] || 0;
@@ -148,7 +148,7 @@ export function DistributionView({ distribution, distributionFocusSeconds: _dist
       </div>
 
       {/* TOOLBAR */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Filter size={14} style={{ color: 'var(--text-muted)' }} />
           <select
@@ -174,8 +174,8 @@ export function DistributionView({ distribution, distributionFocusSeconds: _dist
       </div>
 
       {/* ACTIVITIES LOG TABLE */}
-      <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
+      <div className="card" style={{ overflowX: 'auto', padding: 0, minWidth: 0, maxWidth: '100%' }}>
+        <table style={{ width: '100%', minWidth: 600, borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-muted)', textAlign: 'left' }}>
               <th style={{ padding: '12px 16px' }}>Channel</th>
