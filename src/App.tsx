@@ -20,6 +20,7 @@ import { ForexDashboard } from './components/forex/ForexDashboard';
 import { FitnessDashboard } from './components/fitness/FitnessDashboard';
 import { VoireDashboard } from './components/voire/VoireDashboard';
 import { AskAI } from './components/AskAI';
+import { InsightsView } from './components/insights/InsightsView';
 import { ToastContainer } from './components/Toast';
 import { useActiveTimer } from './hooks/useDatabase';
 import { initDB } from './services/db';
@@ -48,6 +49,7 @@ function App() {
   const getPageTitle = (): string => {
     switch (currentView) {
       case 'dashboard': return 'Command Center';
+      case 'insights': return 'Insights & Integrity';
       case 'time': return 'Time & Intelligence';
       case 'timer': return 'Focus Timer';
       case 'quick-capture': return 'Quick Capture';
@@ -91,6 +93,8 @@ function App() {
     switch (currentView) {
       case 'dashboard':
         return <Dashboard onNavigate={handleNavigate} />;
+      case 'insights':
+        return <InsightsView onNavigate={handleNavigate} />;
       case 'time':
         return <TimeView />;
       case 'timer':

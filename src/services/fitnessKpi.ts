@@ -207,7 +207,7 @@ export function computeFitnessKpiSummary(
   let benchPressBarWeightKg: number | null = null;
 
   for (const ex of exercises) {
-    const name = ex.exerciseName.toLowerCase();
+    const name = (ex.exerciseName || (ex as any).name || '').toLowerCase();
     if (name.includes('bench press') || name.includes('benchpress') || name.includes('flat bench')) {
       if (ex.weightKg > benchPressMaxKg) {
         benchPressMaxKg = ex.weightKg;
@@ -266,7 +266,9 @@ export function computeFitnessKpiSummary(
   // Day with meals logged = unique YYYY-MM-DD containing >= 1 meal
   const mealsByDate: Record<string, NutritionLog[]> = {};
   for (const m of nutrition) {
-    const date = m.eatenAt.slice(0, 10);
+    const eatenAt = m.eatenAt || (m as any).createdAt || (m as any).timestamp;
+    if (!eatenAt) continue;
+    const date = String(eatenAt).slice(0, 10);
     if (!mealsByDate[date]) mealsByDate[date] = [];
     mealsByDate[date].push(m);
   }

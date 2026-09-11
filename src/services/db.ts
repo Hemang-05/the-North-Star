@@ -6,13 +6,14 @@
 import type { ActivityEvent, FocusSession, Goal } from '../types';
 
 const DB_NAME = 'PersonalOS';
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 
 // Store names
 export const STORES = {
   EVENTS: 'activityEvents',
   FOCUS_SESSIONS: 'focusSessions',
   GOALS: 'goals',
+  ALERTS: 'alerts',
   // Pillar-specific stores
   JOB_OPPORTUNITIES: 'jobOpportunities',
   JOB_APPLICATIONS: 'jobApplications',
@@ -93,6 +94,14 @@ function openDB(): Promise<IDBDatabase> {
         const interviewStore = db.createObjectStore(STORES.JOB_INTERVIEWS, { keyPath: 'id' });
         interviewStore.createIndex('by_opportunity', 'opportunityId', { unique: false });
         interviewStore.createIndex('by_schedule', 'scheduledAt', { unique: false });
+      }
+
+      // Alerts store (v10)
+      if (!db.objectStoreNames.contains(STORES.ALERTS)) {
+        const alertStore = db.createObjectStore(STORES.ALERTS, { keyPath: 'id' });
+        alertStore.createIndex('by_status', 'status', { unique: false });
+        alertStore.createIndex('by_type', 'type', { unique: false });
+        alertStore.createIndex('by_fingerprint', 'fingerprint', { unique: false });
       }
 
       // Create all pillar-specific stores with id keyPath

@@ -6,7 +6,7 @@ import {
   Briefcase, Building2, LineChart, TrendingUp,
   Heart, Palette, LayoutDashboard, Timer,
   Target, Zap, MessageSquare, Star, Clock,
-  ChevronLeft, Menu,
+  ChevronLeft, Menu, Compass,
 } from 'lucide-react';
 import { PILLARS } from '../config/pillars';
 import type { PillarSlug } from '../types';
@@ -17,6 +17,7 @@ const ICON_MAP: Record<string, React.FC<{ size?: number }>> = {
 
 export type ViewId =
   | 'dashboard'
+  | 'insights'
   | 'timer'
   | 'time'
   | 'quick-capture'
@@ -77,6 +78,7 @@ export function Sidebar({ currentView, onNavigate, isOpen, onToggle }: SidebarPr
         <nav className="sidebar-nav">
           <div className="sidebar-section-label">Overview</div>
           {navItem('dashboard', 'Dashboard', <LayoutDashboard size={18} />)}
+          {navItem('insights', 'Insights & Alerts', <Compass size={18} />, '#ec4899')}
           {navItem('time', 'Time & Intelligence', <Clock size={18} />, '#06b6d4')}
           {navItem('timer', 'Focus Timer', <Timer size={18} />, '#6366f1')}
           {navItem('quick-capture', 'Quick Capture', <Zap size={18} />, '#22c55e')}

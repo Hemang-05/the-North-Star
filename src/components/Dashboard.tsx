@@ -3,18 +3,22 @@
 // Overview of all pillars, North Star, today's stats, and activity.
 // ============================================================================
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Star, Timer, TrendingUp, Zap, Target,
   Briefcase, Building2, LineChart, Heart, Palette,
   Clock, ArrowUpRight, ArrowDownRight, AlertTriangle, BarChart2,
+  Compass, ShieldAlert,
 } from 'lucide-react';
-import { useTodayEvents, useFocusSessions } from '../hooks/useDatabase';
+import { useTodayEvents, useFocusSessions, useDataChangeListener } from '../hooks/useDatabase';
 import { PILLARS } from '../config/pillars';
 import { formatDuration, formatINR, groupBy, sumBy, formatNumber } from '../utils/helpers';
 import { ActivityFeed } from './ActivityFeed';
 import { generateIntelligenceSnapshot } from '../services/intelligenceFacts';
 import { getPeriodBounds, aggregateFocusSessions } from '../services/timeAggregation';
+import { generateCrossPillarIntelligence } from '../services/crossPillarIntelligence';
+import { syncAlerts } from '../services/alertEngine';
+import { runDataQualityCheck } from '../services/dataQuality';
 import type { ViewId } from './Sidebar';
 import type { IntelligenceSnapshot } from '../types/intelligence';
 import { AIAnalysisCard } from './ai/AIAnalysisCard';
@@ -31,6 +35,37 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const { events: todayEvents } = useTodayEvents();
   const { sessions } = useFocusSessions();
   const [snapshot, setSnapshot] = useState<IntelligenceSnapshot | null>(null);
+
+  const [layer5Summary, setLayer5Summary] = useState({
+    factsCount: 0,
+    openAlertsCount: 0,
+    qualityIssuesCount: 0,
+    criticalQualityCount: 0,
+  });
+
+  const loadLayer5 = useCallback(async () => {
+    try {
+      const [cpResult, alertsList, dqReport] = await Promise.all([
+        generateCrossPillarIntelligence('THIS_WEEK'),
+        syncAlerts('THIS_WEEK'),
+        runDataQualityCheck('THIS_WEEK'),
+      ]);
+      setLayer5Summary({
+        factsCount: cpResult.facts.length,
+        openAlertsCount: alertsList.filter((a) => a.status === 'OPEN').length,
+        qualityIssuesCount: dqReport.summary.totalIssues,
+        criticalQualityCount: dqReport.summary.criticalCount,
+      });
+    } catch (e) {
+      console.warn('Dashboard Layer 5 load failed:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadLayer5();
+  }, [loadLayer5]);
+
+  useDataChangeListener(loadLayer5);
 
   useEffect(() => {
     generateIntelligenceSnapshot('THIS_WEEK')
@@ -188,6 +223,78 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                       )
                     )
                   : '—'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Layer 5 Cross-Pillar & System Integrity Section */}
+      <div className="card" style={{
+        marginBottom: 24,
+        background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.04) 0%, rgba(15, 23, 42, 0.4) 100%)',
+        border: '1px solid rgba(236, 72, 153, 0.25)',
+      }}>
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Compass size={18} style={{ color: '#ec4899' }} />
+            <div>
+              <h2 className="card-title" style={{ margin: 0, fontSize: 'var(--text-base)' }}>Cross-Pillar & System Integrity</h2>
+              <div className="text-xs text-muted">Layer 5 derived intelligence, active exceptions, and data trustworthiness</div>
+            </div>
+          </div>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={() => onNavigate('insights')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <ShieldAlert size={14} style={{ color: '#ec4899' }} />
+            <span>View All Insights</span>
+          </button>
+        </div>
+
+        <div className="card-body" style={{ paddingTop: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+            <div
+              style={{ background: 'rgba(255,255,255,0.02)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', cursor: 'pointer' }}
+              onClick={() => onNavigate('insights')}
+            >
+              <div className="stat-label">Cross-Pillar Observations</div>
+              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: '#06b6d4', marginTop: 2 }}>
+                {layer5Summary.factsCount}
+              </div>
+              <div className="text-xs text-muted">Tradeoffs & allocations</div>
+            </div>
+
+            <div
+              style={{
+                background: layer5Summary.openAlertsCount > 0 ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255,255,255,0.02)',
+                padding: '12px 14px',
+                borderRadius: 'var(--radius-md)',
+                border: layer5Summary.openAlertsCount > 0 ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid var(--border-color)',
+                cursor: 'pointer',
+              }}
+              onClick={() => onNavigate('insights')}
+            >
+              <div className="stat-label">Open Alerts</div>
+              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: layer5Summary.openAlertsCount > 0 ? '#ef4444' : '#22c55e', marginTop: 2 }}>
+                {layer5Summary.openAlertsCount}
+              </div>
+              <div className="text-xs text-muted">
+                {layer5Summary.openAlertsCount > 0 ? 'Exceptions pending' : 'All clear'}
+              </div>
+            </div>
+
+            <div
+              style={{ background: 'rgba(255,255,255,0.02)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', cursor: 'pointer' }}
+              onClick={() => onNavigate('insights')}
+            >
+              <div className="stat-label">Data Quality Issues</div>
+              <div style={{ fontSize: 'var(--text-xl)', fontWeight: 800, color: layer5Summary.qualityIssuesCount > 0 ? '#f59e0b' : 'var(--text-primary)', marginTop: 2 }}>
+                {layer5Summary.qualityIssuesCount}
+              </div>
+              <div className="text-xs text-muted">
+                {layer5Summary.criticalQualityCount > 0 ? `${layer5Summary.criticalQualityCount} critical` : 'Structural integrity verified'}
               </div>
             </div>
           </div>

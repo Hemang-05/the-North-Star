@@ -16,7 +16,10 @@ import type { PillarSlug } from '../../types/core';
 import type { TimePeriodType } from '../../types/intelligence';
 import { getPeriodBounds } from '../timeAggregation';
 import { generateIntelligenceSnapshot } from '../intelligenceFacts';
-import { evaluateAllGoals, loadNorthStar } from '../kpiEvaluation';
+import { evaluateAllGoals, loadNorthStar, loadAllPillarsKpisContext } from '../kpiEvaluation';
+import { computeCrossPillarFacts } from '../crossPillarIntelligence';
+import { syncAlerts } from '../alertEngine';
+import { runDataQualityCheck } from '../dataQuality';
 
 export interface BuildContextOptions {
   mode: AIAnalysisMode;
@@ -25,6 +28,7 @@ export interface BuildContextOptions {
   pillarScope?: PillarSlug;
   goalScope?: string; // goalId
   userQuery?: string;
+  includeLayer5?: boolean;
 }
 
 /**
@@ -51,11 +55,31 @@ export async function buildCanonicalAIContext(options: BuildContextOptions): Pro
   const snapshot = await generateIntelligenceSnapshot(periodType, refDate);
   const { current: periodBounds } = getPeriodBounds(periodType, refDate);
 
-  // 3. Fetch Layer 2 evaluated goals and North Star
-  const [allGoals, northStarResult] = await Promise.all([
+  // 3. Fetch Layer 2 evaluated goals, North Star, and Layer 5 contexts
+  const [allGoals, northStarResult, kpisContext, dataQualityReport, activeAlerts] = await Promise.all([
     evaluateAllGoals(refDate),
     loadNorthStar(refDate),
+    loadAllPillarsKpisContext(refDate),
+    runDataQualityCheck(periodType, refDate),
+    syncAlerts(periodType, refDate),
   ]);
+
+  // Compute Layer 5 Cross-Pillar Facts
+  const allCrossPillarFacts = computeCrossPillarFacts({
+    timeSummary: snapshot.time,
+    goalSnapshots: allGoals,
+    kpisContext,
+    period: periodBounds,
+    now: refDate,
+  });
+
+  const relevantCrossPillarFacts = pillarScope
+    ? allCrossPillarFacts.filter((f) => f.pillarIds.includes(pillarScope))
+    : allCrossPillarFacts;
+
+  const relevantAlerts = pillarScope
+    ? activeAlerts.filter((a) => a.pillarIds.includes(pillarScope))
+    : activeAlerts;
 
   // Filter goals if pillar-scoped or goal-scoped
   let relevantGoals = allGoals;
@@ -222,6 +246,43 @@ export async function buildCanonicalAIContext(options: BuildContextOptions): Pro
     }
   }
 
+  // Layer 5 Intelligence, Alerts, and Data Quality Evidence (Optional)
+  if (options.includeLayer5) {
+    for (const f of relevantCrossPillarFacts) {
+      evidenceCatalog.push({
+        id: `crosspillar.${f.id}`,
+        category: 'TREND',
+        label: f.title,
+        source: 'CrossPillarIntelligence',
+        value: f.description,
+        period: { start: f.period.start, end: f.period.end },
+      });
+    }
+
+    for (const a of relevantAlerts) {
+      evidenceCatalog.push({
+        id: `alert.${a.id}`,
+        category: 'ANOMALY',
+        label: `[${a.severity}] ${a.title}`,
+        source: 'AlertEngine',
+        value: a.description,
+        period: { start: a.period.start, end: a.period.end },
+      });
+    }
+
+    for (const q of dataQualityReport.issues) {
+      if (!pillarScope || q.pillarId === pillarScope) {
+        evidenceCatalog.push({
+          id: `quality.${q.id}`,
+          category: 'EVENT',
+          label: `[${q.severity}] ${q.title}`,
+          source: 'DataQualityEngine',
+          value: q.description,
+        });
+      }
+    }
+  }
+
   // 6. Build the Final Sanitized AIContext
   const allComparisons = snapshot.pillars.flatMap((p) => p.changes || []);
 
@@ -341,6 +402,12 @@ export async function buildCanonicalAIContext(options: BuildContextOptions): Pro
     analysisMode: mode,
     userQuery: userQuery?.trim() || undefined,
   };
+
+  if (options.includeLayer5) {
+    context.crossPillarFacts = relevantCrossPillarFacts;
+    context.alerts = relevantAlerts;
+    context.dataQuality = dataQualityReport;
+  }
 
   return context;
 }

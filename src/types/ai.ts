@@ -7,6 +7,7 @@
 
 import type { GoalStatus, PillarSlug } from './core.ts';
 import type { TimePeriodType } from './intelligence.ts';
+import type { CrossPillarFact, Alert, DataQualityReport } from './layer5.ts';
 
 export const AI_MODEL = 'gemini-3.7-flash';
 
@@ -162,6 +163,9 @@ export interface AIContext {
   evidenceCatalog: AIEvidence[];
   analysisMode: AIAnalysisMode;
   userQuery?: string;
+  crossPillarFacts?: CrossPillarFact[];
+  alerts?: Alert[];
+  dataQuality?: DataQualityReport;
 }
 
 // --- Structured AI Analysis Output Contract ---
