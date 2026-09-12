@@ -280,46 +280,77 @@ export async function callGeminiApi(
     },
   });
 
-  return new Promise((resolve, reject) => {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${apiKey}`;
-    const req = https.request(
-      url,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(payload),
-        },
-        timeout: 45000,
-      },
-      (res) => {
-        let responseBody = '';
-        res.on('data', (chunk) => {
-          responseBody += chunk;
-        });
+  return executeGeminiWithFallback(payload, apiKey, 45000);
+}
 
-        res.on('end', () => {
-          if (res.statusCode === 200) {
-            resolve(responseBody);
-          } else {
-            reject(new Error(`Gemini API returned status ${res.statusCode}: ${responseBody.slice(0, 300)}`));
+/**
+ * Executes a Gemini generateContent request with automatic fallback
+ * when the primary model experiences high demand spikes (503), rate limits (429), or 404s.
+ */
+export async function executeGeminiWithFallback(
+  payload: string,
+  apiKey: string,
+  timeoutMs: number = 30000
+): Promise<string> {
+  const models = [AI_MODEL, 'gemini-3.6-flash'];
+  let lastError = '';
+
+  for (const model of models) {
+    try {
+      const response = await new Promise<{ statusCode: number; body: string }>((resolve, reject) => {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const req = https.request(
+          url,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(payload),
+            },
+            timeout: timeoutMs,
+          },
+          (res) => {
+            let responseBody = '';
+            res.on('data', (chunk) => {
+              responseBody += chunk;
+            });
+            res.on('end', () => {
+              resolve({ statusCode: res.statusCode || 500, body: responseBody });
+            });
           }
+        );
+
+        req.on('timeout', () => {
+          req.destroy();
+          reject(new Error(`Gemini API call to ${model} timed out after ${timeoutMs / 1000}s`));
         });
+
+        req.on('error', (err) => reject(err));
+        req.write(payload);
+        req.end();
+      });
+
+      if (response.statusCode === 200) {
+        return response.body;
       }
-    );
 
-    req.on('timeout', () => {
-      req.destroy();
-      reject(new Error('Gemini API call timed out after 45s'));
-    });
+      // If high demand (503), not found (404), or rate limited (429), log and try fallback
+      lastError = `Gemini API (${model}) returned status ${response.statusCode}: ${response.body.slice(0, 300)}`;
+      if (response.statusCode === 503 || response.statusCode === 404 || response.statusCode === 429) {
+        console.warn(`[AI Server] ${model} unavailable (status ${response.statusCode}). Attempting fallback model...`);
+        continue;
+      }
 
-    req.on('error', (err) => {
-      reject(err);
-    });
+      // Client error (e.g. 400 bad schema), fail immediately
+      throw new Error(lastError);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      lastError = msg;
+      console.warn(`[AI Server] Error calling ${model}: ${msg}. Attempting fallback...`);
+    }
+  }
 
-    req.write(payload);
-    req.end();
-  });
+  throw new Error(lastError || 'All Gemini models failed to respond.');
 }
 
 /**
@@ -547,38 +578,7 @@ Return strictly valid JSON matching the schema.`;
     },
   });
 
-  return new Promise((resolve, reject) => {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${apiKey}`;
-    const req = https.request(
-      url,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(payload),
-        },
-        timeout: 30000,
-      },
-      (res) => {
-        let responseBody = '';
-        res.on('data', (chunk) => { responseBody += chunk; });
-        res.on('end', () => {
-          if (res.statusCode === 200) {
-            resolve(responseBody);
-          } else {
-            reject(new Error(`Gemini API returned status ${res.statusCode}: ${responseBody.slice(0, 300)}`));
-          }
-        });
-      }
-    );
-    req.on('timeout', () => {
-      req.destroy();
-      reject(new Error('Gemini API call timed out after 30s'));
-    });
-    req.on('error', (err) => reject(err));
-    req.write(payload);
-    req.end();
-  });
+  return executeGeminiWithFallback(payload, apiKey, 30000);
 }
 
 /**
@@ -639,7 +639,9 @@ export async function handleAiParseJdRequest(
       throw new Error('Gemini returned an empty extraction.');
     }
 
-    const extracted = JSON.parse(candidateText);
+    // Defensive: strip markdown fences if present
+    const cleanJson = candidateText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const extracted = JSON.parse(cleanJson);
     res.statusCode = 200;
     res.end(JSON.stringify(extracted));
   } catch (err: unknown) {

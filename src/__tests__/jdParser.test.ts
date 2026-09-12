@@ -89,7 +89,25 @@ describe('Job Description (JD) Parser Service', () => {
       expect(res.maxSalary).toBe(160000);
     });
 
-    it('extracts role title from header lines', () => {
+    it('extracts company, location, and modern tech skills from conversational narrative JDs', () => {
+      const jd = `
+        About the job
+        We're building the financial infrastructure Gulf businesses have never had.
+        Noor Al Qallam Group is building Pragma, a business operating system for Bahrain and GCC SMEs.
+        What you'll do:
+        Build and extend Pragma's accounting engine in TypeScript on Supabase/PostgreSQL.
+        Practical experience with RAG, embeddings/vector search, and evaluating model output.
+      `;
+      const res = localHeuristicParse(jd);
+      expect(res.company).toBe('Noor Al Qallam Group');
+      expect(res.location).toBe('Bahrain');
+      expect(res.skills).toContain('TypeScript');
+      expect(res.skills).toContain('Supabase');
+      expect(res.skills).toContain('PostgreSQL');
+      expect(res.skills).toContain('RAG');
+    });
+
+    it('extracts clean role and company when labeled', () => {
       const jd = `
         Senior React Native Developer
         Join our core mobile team building payment products.

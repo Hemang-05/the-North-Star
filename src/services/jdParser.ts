@@ -125,21 +125,38 @@ export function localHeuristicParse(raw: string): ParsedJdResult {
   // 4. Detect Company Name
   for (let i = 0; i < Math.min(lines.length, 5); i++) {
     const line = lines[i];
-    const companyMatch = line.match(/(?:at|about|join|company):\s*([A-Za-z0-9\s&.,-]{2,40})/i)
-      || line.match(/^([A-Za-z0-9\s&.,-]{2,30})\s+(?:is looking for|is hiring|seeks)/i);
+    const companyMatch = line.match(/(?:at|join|company):\s*([A-Za-z0-9\s&.,-]{2,40})/i)
+      || line.match(/^([A-Za-z0-9\s&.,-]{2,35})\s+(?:is building|is developing|is launching|is scaling|is looking for|is hiring|seeks)/i);
 
-    if (companyMatch && !titleKeywords.test(companyMatch[1])) {
-      result.company = companyMatch[1].trim();
-      break;
+    if (companyMatch) {
+      const candidate = companyMatch[1].trim();
+      const lowerCandidate = candidate.toLowerCase();
+      if (
+        !titleKeywords.test(candidate) &&
+        !lowerCandidate.includes('job') &&
+        !lowerCandidate.includes('role') &&
+        !lowerCandidate.includes('team') &&
+        !lowerCandidate.includes('about')
+      ) {
+        result.company = candidate;
+        break;
+      }
     }
   }
 
-  // 5. Detect Common Tech Skills
+  // 5. Detect Location (Common tech hubs, countries, regions)
+  const locationRegex = /\b(Bahrain|GCC|Dubai|UAE|Abu Dhabi|Riyadh|Saudi Arabia|Bengaluru|Bangalore|Mumbai|Delhi|Hyderabad|Pune|San Francisco|New York|London|Singapore|Berlin|Toronto|Seattle|Austin|Chicago|Boston)\b/i;
+  const locMatch = text.match(locationRegex);
+  if (locMatch) {
+    result.location = locMatch[1];
+  }
+
+  // 6. Detect Common Tech Skills
   const commonTech = [
     'React', 'TypeScript', 'JavaScript', 'Node.js', 'Python', 'Go', 'Golang',
-    'Java', 'C++', 'Rust', 'Next.js', 'PostgreSQL', 'SQL', 'MongoDB',
+    'Java', 'C++', 'Rust', 'Next.js', 'PostgreSQL', 'Supabase', 'SQL', 'MongoDB',
     'AWS', 'GCP', 'Azure', 'Docker', 'Kubernetes', 'GraphQL', 'Tailwind',
-    'Redis', 'Kafka', 'Figma', 'System Design',
+    'Redis', 'Kafka', 'Figma', 'System Design', 'RAG', 'Vector Search', 'LLM', 'AI', 'Machine Learning',
   ];
 
   const matchedSkills: string[] = [];

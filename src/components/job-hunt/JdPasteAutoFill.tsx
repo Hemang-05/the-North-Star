@@ -28,7 +28,14 @@ export function JdPasteAutoFill({ onParsed, defaultExpanded = false }: JdPasteAu
 
     // Tier 1: Instant local heuristic parsing (0 API calls, 0 tokens)
     const localResult = localHeuristicParse(text);
-    if (localResult.company || localResult.role || localResult.workMode || localResult.minSalary) {
+    if (
+      localResult.company ||
+      localResult.role ||
+      localResult.workMode ||
+      localResult.location ||
+      localResult.minSalary ||
+      (localResult.skills && localResult.skills.length > 0)
+    ) {
       setLastExtractionType('LOCAL');
       onParsed(localResult);
     }
