@@ -677,5 +677,19 @@ export async function getGoalsByPillar(pillarId: string): Promise<Goal[]> {
   return dbGetByIndex<Goal>(STORES.GOALS, 'by_pillar', pillarId);
 }
 
+// --- Database Maintenance & Reset ---
+export async function clearAllStores(): Promise<void> {
+  const db = await openDB();
+  const storeNames = Object.values(STORES);
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeNames, 'readwrite');
+    for (const name of storeNames) {
+      tx.objectStore(name).clear();
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // --- Initialize DB on import ---
 export const initDB = openDB;

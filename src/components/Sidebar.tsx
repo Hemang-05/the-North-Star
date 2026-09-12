@@ -6,7 +6,7 @@ import {
   Briefcase, Building2, LineChart, TrendingUp,
   Heart, Palette, LayoutDashboard, Timer,
   Target, Zap, MessageSquare, Star, Clock,
-  ChevronLeft, Menu, Compass,
+  ChevronLeft, Menu, Compass, RotateCcw,
 } from 'lucide-react';
 import { PILLARS } from '../config/pillars';
 import type { PillarSlug } from '../types';
@@ -104,7 +104,7 @@ export function Sidebar({ currentView, onNavigate, isOpen, onToggle }: SidebarPr
           {navItem('ask-ai', 'Ask My OS', <MessageSquare size={18} />, '#8b5cf6')}
         </nav>
 
-        <div className="sidebar-footer">
+        <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <button
             className={`btn btn-ghost btn-sm w-full ${currentView === 'goals' ? 'active' : ''}`}
             style={{ justifyContent: 'flex-start', gap: 8 }}
@@ -112,6 +112,21 @@ export function Sidebar({ currentView, onNavigate, isOpen, onToggle }: SidebarPr
           >
             <Target size={14} />
             <span>Goals & KPIs</span>
+          </button>
+          <button
+            className="btn btn-ghost btn-sm w-full"
+            style={{ justifyContent: 'flex-start', gap: 8, color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}
+            onClick={async () => {
+              if (window.confirm('Reset all Personal OS data? This will clear all test/dummy records across all pillars and stores so you can start fresh for your 7-day live test.')) {
+                if (typeof (window as any).resetPersonalOS === 'function') {
+                  await (window as any).resetPersonalOS();
+                }
+              }
+            }}
+            title="Wipe test data and start fresh"
+          >
+            <RotateCcw size={13} />
+            <span>Fresh Start (Reset OS)</span>
           </button>
         </div>
       </aside>
