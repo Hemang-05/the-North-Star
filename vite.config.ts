@@ -1,6 +1,6 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
-import { handleAiAnalyzeRequest } from './src/server/aiHandler.ts';
+import { handleAiAnalyzeRequest, handleAiParseJdRequest } from './src/server/aiHandler.ts';
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -25,6 +25,10 @@ export default defineConfig(({ mode }) => {
       server.middlewares.use('/api/ai/analyze', async (req: any, res: any) => {
         await handleAiAnalyzeRequest(req, res);
       });
+
+      server.middlewares.use('/api/ai/parse-jd', async (req: any, res: any) => {
+        await handleAiParseJdRequest(req, res);
+      });
     },
     configurePreviewServer(server: any) {
       server.middlewares.use('/api/ai/health', (_req: any, res: any) => {
@@ -38,6 +42,10 @@ export default defineConfig(({ mode }) => {
 
       server.middlewares.use('/api/ai/analyze', async (req: any, res: any) => {
         await handleAiAnalyzeRequest(req, res);
+      });
+
+      server.middlewares.use('/api/ai/parse-jd', async (req: any, res: any) => {
+        await handleAiParseJdRequest(req, res);
       });
     },
   };

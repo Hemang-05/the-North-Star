@@ -11,6 +11,8 @@ import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
 import { generateId, now } from '../../utils/helpers';
 import { showToast } from '../Toast';
 import confetti from 'canvas-confetti';
+import { JdPasteAutoFill } from './JdPasteAutoFill';
+import type { ParsedJdResult } from '../../services/jdParser';
 import type {
   JobOpportunity,
   JobApplication,
@@ -61,6 +63,25 @@ export function QuickApplyForm({
       setCompany('');
       setRole('');
       setJobUrl('');
+    }
+  };
+
+  const handleJdParsed = (result: ParsedJdResult) => {
+    if (result.company) setCompany(result.company);
+    if (result.role) setRole(result.role);
+    if (result.workMode) setWorkMode(result.workMode);
+    if (result.skills || result.summary) {
+      const extraParts: string[] = [];
+      if (result.skills && result.skills.length > 0) {
+        extraParts.push(`Key Skills: ${result.skills.join(', ')}`);
+      }
+      if (result.summary) {
+        extraParts.push(result.summary);
+      }
+      if (extraParts.length > 0) {
+        const extra = extraParts.join('\n');
+        setNotes((prev) => (prev ? `${prev}\n\n${extra}` : extra));
+      }
     }
   };
 
@@ -209,6 +230,11 @@ export function QuickApplyForm({
               ))}
             </select>
           </div>
+
+          {/* Smart JD Auto-Fill */}
+          {isNewOpp && (
+            <JdPasteAutoFill onParsed={handleJdParsed} />
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>

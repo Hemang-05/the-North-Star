@@ -470,3 +470,163 @@ export async function handleAiAnalyzeRequest(
     );
   }
 }
+
+// ============================================================================
+// JOB DESCRIPTION (JD) PARSING ENDPOINT
+// ============================================================================
+
+export const JD_EXTRACTION_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    company: { type: 'STRING' },
+    role: { type: 'STRING' },
+    workMode: { type: 'STRING', enum: ['REMOTE', 'HYBRID', 'ONSITE'] },
+    location: { type: 'STRING' },
+    minSalary: { type: 'NUMBER' },
+    maxSalary: { type: 'NUMBER' },
+    currency: { type: 'STRING' },
+    skills: {
+      type: 'ARRAY',
+      items: { type: 'STRING' },
+    },
+    summary: { type: 'STRING' },
+  },
+  required: ['company', 'role', 'workMode'],
+};
+
+export async function callGeminiJdExtraction(
+  jdText: string,
+  apiKey: string
+): Promise<string> {
+  const systemPrompt = `You are a precision recruitment and job description parser.
+Extract key job metadata accurately from raw, unformatted, or noisy job descriptions.
+Rules:
+1. company: The hiring company name. If confidential, output "Confidential".
+2. role: The clean job title (strip out location tags or internal codes).
+3. workMode: Strictly one of "REMOTE", "HYBRID", or "ONSITE".
+4. location: City, State/Region, Country if specified.
+5. minSalary and maxSalary: If provided, normalize to total annual numbers (e.g., ₹18 LPA -> 1800000; $120k -> 120000). If not provided, omit or set to null.
+6. currency: ISO code (e.g. INR, USD, EUR, GBP) if salary is present.
+7. skills: Array of top 5-8 essential required technical skills or competencies.
+8. summary: 1-2 sentence high-level overview of the role.
+Return strictly valid JSON matching the schema.`;
+
+  const payload = JSON.stringify({
+    systemInstruction: {
+      parts: [{ text: systemPrompt }],
+    },
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: `Parse this job description:\n\n${jdText.slice(0, 10000)}` }],
+      },
+    ],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: JD_EXTRACTION_SCHEMA,
+      temperature: 0.1,
+    },
+  });
+
+  return new Promise((resolve, reject) => {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${apiKey}`;
+    const req = https.request(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+        },
+        timeout: 30000,
+      },
+      (res) => {
+        let responseBody = '';
+        res.on('data', (chunk) => { responseBody += chunk; });
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            resolve(responseBody);
+          } else {
+            reject(new Error(`Gemini API returned status ${res.statusCode}: ${responseBody.slice(0, 300)}`));
+          }
+        });
+      }
+    );
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Gemini API call timed out after 30s'));
+    });
+    req.on('error', (err) => reject(err));
+    req.write(payload);
+    req.end();
+  });
+}
+
+/**
+ * Handles HTTP requests for `/api/ai/parse-jd`.
+ */
+export async function handleAiParseJdRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  limiter: RateLimiter = defaultRateLimiter
+): Promise<void> {
+  res.setHeader('Content-Type', 'application/json');
+
+  if (req.method !== 'POST') {
+    res.statusCode = 405;
+    res.end(JSON.stringify({ error: 'Method Not Allowed. Use POST.' }));
+    return;
+  }
+
+  // Rate Limiting
+  const clientIp = req.headers['x-forwarded-for']?.toString() || req.socket.remoteAddress || 'local';
+  if (!limiter.check(clientIp)) {
+    res.statusCode = 429;
+    res.end(JSON.stringify({ error: 'Rate limit exceeded. Please wait a moment before parsing another JD.' }));
+    return;
+  }
+
+  // API Key Check
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    res.statusCode = 503;
+    res.end(JSON.stringify({ error: 'GEMINI_API_KEY is not configured on the server.' }));
+    return;
+  }
+
+  try {
+    const rawBody = await readRequestBody(req, MAX_BODY_BYTES);
+    let parsedBody: { jdText?: string };
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      res.statusCode = 400;
+      res.end(JSON.stringify({ error: 'Invalid JSON body.' }));
+      return;
+    }
+
+    const { jdText } = parsedBody;
+    if (!jdText || typeof jdText !== 'string' || jdText.trim().length === 0) {
+      res.statusCode = 400;
+      res.end(JSON.stringify({ error: 'Missing or empty "jdText" field.' }));
+      return;
+    }
+
+    const rawResponse = await callGeminiJdExtraction(jdText, apiKey);
+    const geminiData = JSON.parse(rawResponse);
+    const candidateText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!candidateText) {
+      throw new Error('Gemini returned an empty extraction.');
+    }
+
+    const extracted = JSON.parse(candidateText);
+    res.statusCode = 200;
+    res.end(JSON.stringify(extracted));
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[JD Parser Server Error]:', message);
+    res.statusCode = 502;
+    res.end(JSON.stringify({ error: message }));
+  }
+}

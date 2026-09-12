@@ -33,6 +33,8 @@ import type {
 import { ALL_JOB_STAGES } from '../../services/jobHuntKpi';
 import { generateId, now, timeAgo, formatINR, todayDate } from '../../utils/helpers';
 import { showToast } from '../Toast';
+import { JdPasteAutoFill } from './JdPasteAutoFill';
+import type { ParsedJdResult } from '../../services/jdParser';
 import { QuickApplyForm } from './QuickApplyForm';
 
 interface OpportunityManagerProps {
@@ -125,6 +127,28 @@ export function OpportunityManager({
     setMaxSalary(opp.maxSalary ?? '');
     setNotes(opp.notes || '');
     setShowAddModal(true);
+  };
+
+  const handleJdParsed = (result: ParsedJdResult) => {
+    if (result.company) setCompany(result.company);
+    if (result.role) setRole(result.role);
+    if (result.workMode) setWorkMode(result.workMode);
+    if (result.location) setLocation(result.location);
+    if (typeof result.minSalary === 'number') setMinSalary(result.minSalary);
+    if (typeof result.maxSalary === 'number') setMaxSalary(result.maxSalary);
+    if (result.skills || result.summary) {
+      const extraParts: string[] = [];
+      if (result.skills && result.skills.length > 0) {
+        extraParts.push(`Key Skills: ${result.skills.join(', ')}`);
+      }
+      if (result.summary) {
+        extraParts.push(result.summary);
+      }
+      if (extraParts.length > 0) {
+        const extra = extraParts.join('\n');
+        setNotes((prev) => (prev ? `${prev}\n\n${extra}` : extra));
+      }
+    }
   };
 
   const handleSaveOpp = async (e: React.FormEvent) => {
@@ -816,6 +840,10 @@ export function OpportunityManager({
               {editingOpp ? 'Edit Opportunity' : 'Add New Job Opportunity'}
             </h3>
             <form onSubmit={handleSaveOpp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {!editingOpp && (
+                <JdPasteAutoFill onParsed={handleJdParsed} />
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label className="form-label">Company Name *</label>
