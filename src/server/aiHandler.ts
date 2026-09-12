@@ -158,10 +158,32 @@ export interface AnalyzeRequestBody {
   thinkingBudgetOverride?: number;
 }
 
+export type ValidateAnalyzeResult =
+  | { valid: true; data: AnalyzeRequestBody; error?: never }
+  | { valid: false; error: string; data?: never };
+
+/**
+ * Reads HTTP request body with byte size bounds.
+ */
+export async function readRequestBody(req: IncomingMessage, maxBytes: number): Promise<string> {
+  let bodyBuffer = '';
+  let byteCount = 0;
+
+  for await (const chunk of req) {
+    byteCount += chunk.length;
+    if (byteCount > maxBytes) {
+      throw new Error(`Payload too large. Max allowed: ${maxBytes} bytes`);
+    }
+    bodyBuffer += chunk.toString('utf8');
+  }
+
+  return bodyBuffer;
+}
+
 /**
  * Validates request payload against security and schema constraints.
  */
-export function validateAnalyzeRequest(body: unknown): { valid: true; data: AnalyzeRequestBody } | { valid: false; error: string } {
+export function validateAnalyzeRequest(body: unknown): ValidateAnalyzeResult {
   if (!body || typeof body !== 'object') {
     return { valid: false, error: 'Request body must be an object' };
   }
@@ -371,16 +393,13 @@ export async function handleAiAnalyzeRequest(
 
   // 2. Read request body with size bounds
   let bodyBuffer = '';
-  let byteCount = 0;
-
-  for await (const chunk of req) {
-    byteCount += chunk.length;
-    if (byteCount > MAX_BODY_BYTES) {
-      res.statusCode = 413;
-      res.end(JSON.stringify({ success: false, error: `Payload too large. Max allowed: ${MAX_BODY_BYTES} bytes` }));
-      return;
-    }
-    bodyBuffer += chunk.toString('utf8');
+  try {
+    bodyBuffer = await readRequestBody(req, MAX_BODY_BYTES);
+  } catch (err: unknown) {
+    res.statusCode = 413;
+    const msg = err instanceof Error ? err.message : `Payload too large. Max allowed: ${MAX_BODY_BYTES} bytes`;
+    res.end(JSON.stringify({ success: false, error: msg }));
+    return;
   }
 
   let parsedJson: unknown;

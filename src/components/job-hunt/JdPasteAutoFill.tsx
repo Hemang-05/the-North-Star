@@ -4,7 +4,7 @@
 // ============================================================================
 
 import { useState } from 'react';
-import { Sparkles, FileText, ChevronDown, ChevronUp, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Sparkles, FileText, ChevronDown, ChevronUp, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { localHeuristicParse, parseJdWithAi, type ParsedJdResult } from '../../services/jdParser';
 import { showToast } from '../Toast';
 
