@@ -120,7 +120,7 @@ export function InsightsView({ onNavigate }: InsightsViewProps) {
   const openAlertsCount = alerts.filter((a) => a.status === 'OPEN').length;
 
   return (
-    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0, maxWidth: '100%', boxSizing: 'border-box' }}>
+    <div className="page-body" style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0, maxWidth: '100%', width: '100%', boxSizing: 'border-box', overflowX: 'hidden' }}>
       {/* 1. COMMAND HEADER */}
       <div className="card" style={{
         padding: 24,
@@ -174,9 +174,9 @@ export function InsightsView({ onNavigate }: InsightsViewProps) {
 
         {/* METRIC RIBBON */}
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))',
           gap: 12, marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          minWidth: 0, width: '100%',
+          minWidth: 0, width: '100%', boxSizing: 'border-box',
         }}>
           <div className="card" style={{ padding: '10px 14px', background: 'rgba(255, 255, 255, 0.02)' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: 2 }}>Cross-Pillar Facts</div>
@@ -217,31 +217,65 @@ export function InsightsView({ onNavigate }: InsightsViewProps) {
 
       {/* 2. LAYER 5 TAB NAVIGATION */}
       <div style={{
-        display: 'flex', gap: 8, borderBottom: '1px solid var(--border-subtle)',
-        paddingBottom: 2, overflowX: 'auto', minWidth: 0, maxWidth: '100%', width: '100%',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+        gap: 8,
+        borderBottom: '1px solid var(--border-subtle)',
+        paddingBottom: 8,
+        minWidth: 0,
+        maxWidth: '100%',
+        width: '100%',
+        boxSizing: 'border-box',
       }}>
         <button
           className={`btn btn-sm ${activeTab === 'CROSS_PILLAR' ? 'btn-primary' : 'btn-ghost'}`}
           onClick={() => setActiveTab('CROSS_PILLAR')}
-          style={{ gap: 6, whiteSpace: 'nowrap' }}
+          style={{
+            padding: '6px 8px',
+            fontSize: '11px',
+            gap: 4,
+            width: '100%',
+            justifyContent: 'center',
+            whiteSpace: 'normal',
+            lineHeight: 1.2,
+          }}
         >
-          <Layers size={14} /> Cross-Pillar Observations ({facts.length})
+          <Layers size={13} style={{ flexShrink: 0 }} />
+          <span>Cross-Pillar ({facts.length})</span>
         </button>
 
         <button
           className={`btn btn-sm ${activeTab === 'ALERTS' ? 'btn-primary' : 'btn-ghost'}`}
           onClick={() => setActiveTab('ALERTS')}
-          style={{ gap: 6, whiteSpace: 'nowrap' }}
+          style={{
+            padding: '6px 8px',
+            fontSize: '11px',
+            gap: 4,
+            width: '100%',
+            justifyContent: 'center',
+            whiteSpace: 'normal',
+            lineHeight: 1.2,
+          }}
         >
-          <ShieldAlert size={14} /> Alerts & Exceptions ({openAlertsCount} Open)
+          <ShieldAlert size={13} style={{ flexShrink: 0 }} />
+          <span>Alerts ({openAlertsCount})</span>
         </button>
 
         <button
           className={`btn btn-sm ${activeTab === 'DATA_QUALITY' ? 'btn-primary' : 'btn-ghost'}`}
           onClick={() => setActiveTab('DATA_QUALITY')}
-          style={{ gap: 6, whiteSpace: 'nowrap' }}
+          style={{
+            padding: '6px 8px',
+            fontSize: '11px',
+            gap: 4,
+            width: '100%',
+            justifyContent: 'center',
+            whiteSpace: 'normal',
+            lineHeight: 1.2,
+          }}
         >
-          <Database size={14} /> Data Quality & Integrity ({qualityReport?.summary.totalIssues ?? 0})
+          <Database size={13} style={{ flexShrink: 0 }} />
+          <span>Data Quality ({qualityReport?.summary.totalIssues ?? 0})</span>
         </button>
       </div>
 
