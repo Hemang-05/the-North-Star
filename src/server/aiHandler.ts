@@ -599,7 +599,8 @@ export async function handleAiParseJdRequest(
 
   // Rate Limiting
   const clientIp = req.headers['x-forwarded-for']?.toString() || req.socket.remoteAddress || 'local';
-  if (!limiter.check(clientIp)) {
+  const rateLimitResult = limiter.check(clientIp);
+  if (!rateLimitResult.allowed) {
     res.statusCode = 429;
     res.end(JSON.stringify({ error: 'Rate limit exceeded. Please wait a moment before parsing another JD.' }));
     return;

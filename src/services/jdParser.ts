@@ -198,6 +198,9 @@ export async function parseJdWithAi(raw: string): Promise<ParsedJdResult> {
 
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
+    if (res.status === 404) {
+      throw new Error(errData.error || 'AI JD parser endpoint not found (404). Please ensure the dev server has been restarted.');
+    }
     throw new Error(errData.error || `Server returned error (${res.status})`);
   }
 

@@ -10,43 +10,41 @@ export default defineConfig(({ mode }) => {
     process.env.GEMINI_API_KEY = env.GEMINI_API_KEY;
   }
 
+  const handleAiApi = async (req: any, res: any, next: any) => {
+    const rawUrl = req.originalUrl || req.url || '/';
+    const parsedUrl = new URL(rawUrl, `http://${req.headers.host || 'localhost'}`);
+    const pathname = parsedUrl.pathname.replace(/\/+$/, '');
+
+    if (pathname === '/api/ai/health') {
+      res.setHeader('Content-Type', 'application/json');
+      res.statusCode = 200;
+      res.end(JSON.stringify({
+        status: 'ok',
+        model: 'gemini-3.7-flash',
+      }));
+      return;
+    }
+
+    if (pathname === '/api/ai/analyze') {
+      await handleAiAnalyzeRequest(req, res);
+      return;
+    }
+
+    if (pathname === '/api/ai/parse-jd') {
+      await handleAiParseJdRequest(req, res);
+      return;
+    }
+
+    next();
+  };
+
   const aiApiPlugin = {
     name: 'personal-os-ai-api',
     configureServer(server: any) {
-      server.middlewares.use('/api/ai/health', (_req: any, res: any) => {
-        res.setHeader('Content-Type', 'application/json');
-        res.statusCode = 200;
-        res.end(JSON.stringify({
-          status: 'ok',
-          model: 'gemini-3.7-flash',
-        }));
-      });
-
-      server.middlewares.use('/api/ai/analyze', async (req: any, res: any) => {
-        await handleAiAnalyzeRequest(req, res);
-      });
-
-      server.middlewares.use('/api/ai/parse-jd', async (req: any, res: any) => {
-        await handleAiParseJdRequest(req, res);
-      });
+      server.middlewares.use(handleAiApi);
     },
     configurePreviewServer(server: any) {
-      server.middlewares.use('/api/ai/health', (_req: any, res: any) => {
-        res.setHeader('Content-Type', 'application/json');
-        res.statusCode = 200;
-        res.end(JSON.stringify({
-          status: 'ok',
-          model: 'gemini-3.7-flash',
-        }));
-      });
-
-      server.middlewares.use('/api/ai/analyze', async (req: any, res: any) => {
-        await handleAiAnalyzeRequest(req, res);
-      });
-
-      server.middlewares.use('/api/ai/parse-jd', async (req: any, res: any) => {
-        await handleAiParseJdRequest(req, res);
-      });
+      server.middlewares.use(handleAiApi);
     },
   };
 

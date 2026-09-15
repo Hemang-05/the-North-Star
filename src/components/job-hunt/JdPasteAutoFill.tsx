@@ -55,7 +55,23 @@ export function JdPasteAutoFill({ onParsed, defaultExpanded = false }: JdPasteAu
       showToast('Job details extracted via Gemini AI!', 'success');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'AI parsing failed';
-      showToast(message, 'error');
+      // Resilient fallback: auto-fill with local heuristic parse if AI endpoint returned 404 or failed
+      const fallbackResult = localHeuristicParse(jdText);
+      const hasExtractedData =
+        fallbackResult.company ||
+        fallbackResult.role ||
+        fallbackResult.workMode ||
+        fallbackResult.location ||
+        fallbackResult.minSalary ||
+        (fallbackResult.skills && fallbackResult.skills.length > 0);
+
+      if (hasExtractedData) {
+        setLastExtractionType('LOCAL');
+        onParsed(fallbackResult);
+        showToast(`AI endpoint unavailable (${message}). Auto-filled with local heuristic extraction.`, 'warning');
+      } else {
+        showToast(message, 'error');
+      }
     } finally {
       setIsAiLoading(false);
     }

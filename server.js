@@ -33,10 +33,12 @@ const DIST_DIR = path.join(__dirname, 'dist');
 // Dynamically import compiled or source AI handler
 let handleAiAnalyzeRequest;
 let handleAiHealthRequest;
+let handleAiParseJdRequest;
 try {
   const handlerModule = await import('./src/server/aiHandler.ts');
   handleAiAnalyzeRequest = handlerModule.handleAiAnalyzeRequest;
   handleAiHealthRequest = handlerModule.handleAiHealthRequest;
+  handleAiParseJdRequest = handlerModule.handleAiParseJdRequest;
 } catch {
   console.warn('Could not import TypeScript handler directly; ensure ts-node or compiled handler is used.');
 }
@@ -79,6 +81,17 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ success: false, error: 'AI server handler unavailable' }));
+    }
+    return;
+  }
+
+  if (pathname === '/api/ai/parse-jd') {
+    if (handleAiParseJdRequest) {
+      await handleAiParseJdRequest(req, res);
+    } else {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: 'AI server handler unavailable' }));
     }
     return;
   }

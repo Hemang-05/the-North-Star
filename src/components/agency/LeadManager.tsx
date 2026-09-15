@@ -20,14 +20,19 @@ interface LeadManagerProps {
   onConvertToClient: (lead: AgencyLead) => void;
 }
 
-// Ordered pipeline columns for Kanban
+// Ordered pipeline columns for Kanban — must match ALL active + terminal stages
 const PIPELINE_COLUMNS: { stage: LeadStage; label: string; color: string }[] = [
   { stage: 'LEAD_FOUND', label: 'Lead Found', color: '#64748b' },
+  { stage: 'QUALIFIED', label: 'Qualified', color: '#3b82f6' },
   { stage: 'CONTACTED', label: 'Contacted', color: '#06b6d4' },
+  { stage: 'REPLIED', label: 'Replied', color: '#8b5cf6' },
   { stage: 'CALL', label: 'Call / Meeting', color: '#f59e0b' },
   { stage: 'PROPOSAL', label: 'Proposal', color: '#ec4899' },
   { stage: 'NEGOTIATION', label: 'Negotiation', color: '#6366f1' },
   { stage: 'WON', label: 'Won ✓', color: '#22c55e' },
+  { stage: 'LOST', label: 'Lost', color: '#ef4444' },
+  { stage: 'NOT_INTERESTED', label: 'Not Interested', color: '#71717a' },
+  { stage: 'NO_RESPONSE', label: 'No Response', color: '#a1a1aa' },
 ];
 
 export function LeadManager({ leads, clients: _clients, onConvertToClient }: LeadManagerProps) {
@@ -103,9 +108,11 @@ export function LeadManager({ leads, clients: _clients, onConvertToClient }: Lea
     setSelectedLead(null);
   };
 
-  // Get next stage for a lead
+  // Get next stage for a lead (matches the full funnel progression)
   const getNextStage = (currentStage: LeadStage): LeadStage | null => {
-    const order: LeadStage[] = ['LEAD_FOUND', 'CONTACTED', 'CALL', 'PROPOSAL', 'NEGOTIATION', 'WON'];
+    const order: LeadStage[] = [
+      'LEAD_FOUND', 'QUALIFIED', 'CONTACTED', 'REPLIED', 'CALL', 'PROPOSAL', 'NEGOTIATION', 'WON',
+    ];
     const idx = order.indexOf(currentStage);
     if (idx >= 0 && idx < order.length - 1) return order[idx + 1];
     return null;
@@ -153,15 +160,26 @@ export function LeadManager({ leads, clients: _clients, onConvertToClient }: Lea
       </div>
 
       {/* KANBAN VIEW */}
-      {viewMode === 'KANBAN' && (
+      {viewMode === 'KANBAN' && (() => {
+        const activeCols = PIPELINE_COLUMNS.filter(c =>
+          !['LOST', 'NOT_INTERESTED', 'NO_RESPONSE'].includes(c.stage)
+        );
+        const terminalCols = PIPELINE_COLUMNS.filter(c =>
+          ['LOST', 'NOT_INTERESTED', 'NO_RESPONSE'].includes(c.stage)
+        );
+        const terminalWithLeads = terminalCols.filter(c =>
+          leads.some(l => l.stage === c.stage)
+        );
+        return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${PIPELINE_COLUMNS.length}, minmax(180px, 1fr))`,
+          gridTemplateColumns: `repeat(${activeCols.length}, minmax(150px, 1fr))`,
           gap: 12,
           overflowX: 'auto',
           paddingBottom: 8,
         }}>
-          {PIPELINE_COLUMNS.map(col => {
+          {activeCols.map(col => {
             const columnLeads = leads.filter(l => l.stage === col.stage);
             return (
               <div key={col.stage} style={{
@@ -267,7 +285,73 @@ export function LeadManager({ leads, clients: _clients, onConvertToClient }: Lea
             );
           })}
         </div>
-      )}
+
+        {/* Terminal / Closed Stages — only shown when leads exist in them */}
+        {terminalWithLeads.length > 0 && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${terminalWithLeads.length}, minmax(150px, 1fr))`,
+            gap: 12,
+          }}>
+            {terminalWithLeads.map(col => {
+              const columnLeads = leads.filter(l => l.stage === col.stage);
+              return (
+                <div key={col.stage} style={{
+                  minHeight: 80,
+                  background: 'var(--bg-subtle)',
+                  borderRadius: 'var(--radius-md)',
+                  border: `1px solid ${col.color}30`,
+                  padding: '10px 12px',
+                  opacity: 0.85,
+                }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    marginBottom: 8, paddingBottom: 6, borderBottom: `2px solid ${col.color}`,
+                  }}>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: col.color }}>
+                      {col.label}
+                    </span>
+                    <span style={{
+                      fontSize: '10px', padding: '1px 6px', borderRadius: 8,
+                      background: `${col.color}20`, color: col.color,
+                    }}>
+                      {columnLeads.length}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {columnLeads.map(lead => (
+                      <div
+                        key={lead.id}
+                        onClick={() => setSelectedLead(lead)}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 'var(--radius-sm)',
+                          background: 'var(--bg-primary)',
+                          border: '1px solid var(--border-subtle)',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                        }}
+                      >
+                        <span style={{ fontWeight: 600 }}>{lead.companyName}</span>
+                        {lead.estimatedDealValue && (
+                          <span style={{
+                            marginLeft: 8, fontFamily: 'var(--font-mono)',
+                            color: 'var(--text-muted)', fontSize: '10px',
+                          }}>
+                            {formatINR(lead.estimatedDealValue)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        </div>
+        );
+      })()}
 
       {/* TABLE VIEW */}
       {viewMode === 'TABLE' && (
