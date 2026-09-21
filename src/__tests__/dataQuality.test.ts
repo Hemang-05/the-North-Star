@@ -114,9 +114,10 @@ describe('Data Quality & Integrity Engine', () => {
         amount: -5000, // Invalid negative amount
         currency: 'INR',
         status: 'SENT',
-        issueDate: '2026-09-01',
+        issuedAt: '2026-09-01T00:00:00.000Z',
         dueDate: '2026-09-15',
         createdAt: '2026-09-01T00:00:00.000Z',
+        updatedAt: '2026-09-01T00:00:00.000Z',
       },
     ];
 
@@ -138,9 +139,12 @@ describe('Data Quality & Integrity Engine', () => {
         id: 'client_valid',
         name: 'Valid Client Corp',
         status: 'ACTIVE',
-        totalBilled: 10000,
-        totalPaid: 10000,
+        lifetimeRevenue: 10000,
+        startDate: '2026-09-01T00:00:00.000Z',
+        acquisitionChannel: 'REFERRAL',
+        icpScore: 80,
         createdAt: '2026-09-01T00:00:00.000Z',
+        updatedAt: '2026-09-01T00:00:00.000Z',
       },
     ];
 
@@ -149,9 +153,14 @@ describe('Data Quality & Integrity Engine', () => {
         id: 'proj_orphan',
         clientId: 'client_non_existent', // Orphaned!
         name: 'Website Redesign',
-        status: 'ACTIVE',
-        billingType: 'FIXED',
+        status: 'IN_PROGRESS',
+        agreedAmount: 50000,
+        receivedAmount: 0,
+        currency: 'INR',
+        hoursSpent: 0,
+        startDate: '2026-09-01T00:00:00.000Z',
         createdAt: '2026-09-01T00:00:00.000Z',
+        updatedAt: '2026-09-01T00:00:00.000Z',
       },
     ];
 
@@ -161,11 +170,10 @@ describe('Data Quality & Integrity Engine', () => {
         id: 'item_orphan',
         orderId: 'order_non_existent', // Orphaned!
         productId: 'prod_1',
-        designId: 'des_1',
         productName: 'Tee',
         unitPriceAtSale: 1200,
+        unitProductionCostAtSale: 400,
         quantity: 1,
-        createdAt: '2026-09-01T00:00:00.000Z',
       },
     ];
 
@@ -242,9 +250,10 @@ describe('Data Quality & Integrity Engine', () => {
         currency: 'INR',
         status: 'PAID',
         paidAt: '2026-09-03T12:00:00.000Z',
-        issueDate: '2026-09-01',
+        issuedAt: '2026-09-01T00:00:00.000Z',
         dueDate: '2026-09-10',
         createdAt: '2026-09-01T00:00:00.000Z',
+        updatedAt: '2026-09-01T00:00:00.000Z',
       },
       {
         id: 'inv_2',
@@ -255,9 +264,10 @@ describe('Data Quality & Integrity Engine', () => {
         currency: 'INR',
         status: 'PAID',
         // Missing paidAt on PAID invoice!
-        issueDate: '2026-09-02',
+        issuedAt: '2026-09-02T00:00:00.000Z',
         dueDate: '2026-09-12',
         createdAt: '2026-09-02T00:00:00.000Z',
+        updatedAt: '2026-09-02T00:00:00.000Z',
       },
     ];
 

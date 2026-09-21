@@ -4,46 +4,53 @@ import {
   generatePeriodOccurrenceId,
   evaluateAlerts,
 } from '../services/alertEngine.js';
-import type { Alert, AlertStatus, DataQualityReport } from '../types/layer5.js';
-import type { CrossPillarFact } from '../types/layer5.js';
-import type { GoalKpiSnapshot } from '../types/intelligence.js';
+import type { Alert, DataQualityReport, CrossPillarFact } from '../types/layer5.js';
+import type { GoalKpiSnapshot, PeriodBounds } from '../types';
 
 describe('Alert Engine (Layer 5)', () => {
-  const currentPeriod = {
+  const currentPeriod: PeriodBounds = {
+    type: 'WEEKLY',
     start: '2026-03-01T00:00:00.000Z',
     end: '2026-03-07T23:59:59.999Z',
+    label: 'Week 10',
   };
 
-  const previousPeriod = {
+  const previousPeriod: PeriodBounds = {
+    type: 'WEEKLY',
     start: '2026-02-22T00:00:00.000Z',
     end: '2026-02-28T23:59:59.999Z',
+    label: 'Week 9',
   };
 
   const emptyDataQualityReport: DataQualityReport = {
-    totalChecked: 10,
-    issuesBySeverity: { CRITICAL: 0, WARNING: 0, INFO: 0 },
-    issuesByType: {
-      INVALID_TIMESTAMP: 0,
-      ORPHANED_RELATION: 0,
-      NEGATIVE_AMOUNT: 0,
-      ZERO_VALUE_SUSPICION: 0,
-      DUPLICATE_ACTIVITY: 0,
-      FINANCIAL_INVARIANT_VIOLATION: 0,
-      CHRONOLOGY_VIOLATION: 0,
+    period: currentPeriod,
+    checkedAt: '2026-03-07T12:00:00.000Z',
+    summary: {
+      totalIssues: 0,
+      criticalCount: 0,
+      warningCount: 0,
+      infoCount: 0,
+      byCategory: {
+        COMPLETENESS: 0,
+        VALIDITY: 0,
+        CONSISTENCY: 0,
+        DUPLICATION: 0,
+        REFERENTIAL_INTEGRITY: 0,
+        TEMPORAL_INTEGRITY: 0,
+      },
     },
     issues: [],
-    runAt: '2026-03-07T12:00:00.000Z',
   };
 
   it('generates deterministic logical fingerprints and period occurrence IDs', () => {
-    const fp1 = generateAlertFingerprint('GOAL_REGRESSION', ['saas_agency'], 'goal-revenue-1');
-    const fp2 = generateAlertFingerprint('GOAL_REGRESSION', ['saas_agency'], 'goal-revenue-1');
+    const fp1 = generateAlertFingerprint('GOAL_REGRESSION', ['agency'], 'goal-revenue-1');
+    const fp2 = generateAlertFingerprint('GOAL_REGRESSION', ['agency'], 'goal-revenue-1');
     expect(fp1).toBe(fp2);
-    expect(fp1).toBe('GOAL_REGRESSION:saas_agency:goal-revenue-1');
+    expect(fp1).toBe('GOAL_REGRESSION:agency:goal-revenue-1');
 
     // Sorting of pillars in fingerprint
-    const fpMulti1 = generateAlertFingerprint('TIME_MISMATCH', ['saas_agency', 'fitness'], 'time-tradeoff');
-    const fpMulti2 = generateAlertFingerprint('TIME_MISMATCH', ['fitness', 'saas_agency'], 'time-tradeoff');
+    const fpMulti1 = generateAlertFingerprint('TIME_MISMATCH', ['agency', 'fitness'], 'time-tradeoff');
+    const fpMulti2 = generateAlertFingerprint('TIME_MISMATCH', ['fitness', 'agency'], 'time-tradeoff');
     expect(fpMulti1).toBe(fpMulti2);
 
     const occId = generatePeriodOccurrenceId(fp1, currentPeriod);
@@ -55,8 +62,8 @@ describe('Alert Engine (Layer 5)', () => {
       {
         id: 'snap-prev-1',
         goalId: 'goal-agency-rev',
-        pillarId: 'saas_agency',
-        period: { ...previousPeriod, label: 'Week 9' },
+        pillarId: 'agency',
+        period: previousPeriod,
         snapshotDate: previousPeriod.end,
         targetValue: 10000,
         currentValue: 10500,
@@ -69,8 +76,8 @@ describe('Alert Engine (Layer 5)', () => {
       {
         id: 'snap-curr-1',
         goalId: 'goal-agency-rev',
-        pillarId: 'saas_agency',
-        period: { ...currentPeriod, label: 'Week 10' },
+        pillarId: 'agency',
+        period: currentPeriod,
         snapshotDate: currentPeriod.end,
         targetValue: 12000,
         currentValue: 6000,
@@ -99,7 +106,7 @@ describe('Alert Engine (Layer 5)', () => {
   });
 
   it('preserves ACKNOWLEDGED state and increments occurrenceCount on re-evaluation in the same period', () => {
-    const fp = generateAlertFingerprint('GOAL_REGRESSION', ['saas_agency'], 'goal-agency-rev');
+    const fp = generateAlertFingerprint('GOAL_REGRESSION', ['agency'], 'goal-agency-rev');
     const occId = generatePeriodOccurrenceId(fp, currentPeriod);
 
     const existingAcknowledgedAlert: Alert = {
@@ -109,10 +116,20 @@ describe('Alert Engine (Layer 5)', () => {
       severity: 'CRITICAL',
       status: 'ACKNOWLEDGED',
       title: 'Goal Regressed: Agency Revenue',
+      description: 'Status changed from ON_TRACK to BEHIND',
       message: 'Status changed from ON_TRACK to BEHIND',
+      evidence: [
+        {
+          sourceType: 'GOAL',
+          sourceId: 'snap-curr-1',
+          value: 'BEHIND',
+        },
+      ],
       evidenceIds: ['snapshot:snap-curr-1'],
-      pillarIds: ['saas_agency'],
+      pillarIds: ['agency'],
       period: currentPeriod,
+      detectedAt: '2026-03-01T10:00:00.000Z',
+      lastEvaluatedAt: '2026-03-01T10:00:00.000Z',
       firstDetectedAt: '2026-03-01T10:00:00.000Z',
       lastDetectedAt: '2026-03-01T10:00:00.000Z',
       occurrenceCount: 1,
@@ -124,8 +141,8 @@ describe('Alert Engine (Layer 5)', () => {
       {
         id: 'snap-prev-1',
         goalId: 'goal-agency-rev',
-        pillarId: 'saas_agency',
-        period: { ...previousPeriod, label: 'Week 9' },
+        pillarId: 'agency',
+        period: previousPeriod,
         snapshotDate: previousPeriod.end,
         targetValue: 10000,
         currentValue: 10500,
@@ -138,8 +155,8 @@ describe('Alert Engine (Layer 5)', () => {
       {
         id: 'snap-curr-1',
         goalId: 'goal-agency-rev',
-        pillarId: 'saas_agency',
-        period: { ...currentPeriod, label: 'Week 10' },
+        pillarId: 'agency',
+        period: currentPeriod,
         snapshotDate: currentPeriod.end,
         targetValue: 12000,
         currentValue: 6000,
@@ -165,7 +182,7 @@ describe('Alert Engine (Layer 5)', () => {
   });
 
   it('auto-resolves active alert when condition clears on subsequent calculation', () => {
-    const fp = generateAlertFingerprint('GOAL_REGRESSION', ['saas_agency'], 'goal-agency-rev');
+    const fp = generateAlertFingerprint('GOAL_REGRESSION', ['agency'], 'goal-agency-rev');
     const occId = generatePeriodOccurrenceId(fp, currentPeriod);
 
     const existingAlert: Alert = {
@@ -175,10 +192,20 @@ describe('Alert Engine (Layer 5)', () => {
       severity: 'CRITICAL',
       status: 'OPEN',
       title: 'Goal Regressed: Agency Revenue',
+      description: 'Status changed from ON_TRACK to BEHIND',
       message: 'Status changed from ON_TRACK to BEHIND',
+      evidence: [
+        {
+          sourceType: 'GOAL',
+          sourceId: 'snap-curr-1',
+          value: 'BEHIND',
+        },
+      ],
       evidenceIds: ['snapshot:snap-curr-1'],
-      pillarIds: ['saas_agency'],
+      pillarIds: ['agency'],
       period: currentPeriod,
+      detectedAt: '2026-03-01T10:00:00.000Z',
+      lastEvaluatedAt: '2026-03-01T10:00:00.000Z',
       firstDetectedAt: '2026-03-01T10:00:00.000Z',
       lastDetectedAt: '2026-03-01T10:00:00.000Z',
       occurrenceCount: 1,
@@ -189,8 +216,8 @@ describe('Alert Engine (Layer 5)', () => {
       {
         id: 'snap-curr-recovered',
         goalId: 'goal-agency-rev',
-        pillarId: 'saas_agency',
-        period: { ...currentPeriod, label: 'Week 10' },
+        pillarId: 'agency',
+        period: currentPeriod,
         snapshotDate: currentPeriod.end,
         targetValue: 12000,
         currentValue: 12500,
@@ -217,32 +244,40 @@ describe('Alert Engine (Layer 5)', () => {
 
   it('escalates CRITICAL data quality violations into high-severity alerts', () => {
     const criticalQualityReport: DataQualityReport = {
-      totalChecked: 10,
-      issuesBySeverity: { CRITICAL: 1, WARNING: 0, INFO: 0 },
-      issuesByType: {
-        INVALID_TIMESTAMP: 0,
-        ORPHANED_RELATION: 0,
-        NEGATIVE_AMOUNT: 0,
-        ZERO_VALUE_SUSPICION: 0,
-        DUPLICATE_ACTIVITY: 0,
-        FINANCIAL_INVARIANT_VIOLATION: 1,
-        CHRONOLOGY_VIOLATION: 0,
+      period: currentPeriod,
+      checkedAt: '2026-03-07T12:00:00.000Z',
+      summary: {
+        totalIssues: 1,
+        criticalCount: 1,
+        warningCount: 0,
+        infoCount: 0,
+        byCategory: {
+          COMPLETENESS: 0,
+          VALIDITY: 0,
+          CONSISTENCY: 0,
+          DUPLICATION: 0,
+          REFERENTIAL_INTEGRITY: 0,
+          TEMPORAL_INTEGRITY: 1,
+        },
       },
       issues: [
         {
           id: 'dq-inv-1',
           severity: 'CRITICAL',
-          type: 'FINANCIAL_INVARIANT_VIOLATION',
-          entityType: 'AgencyInvoice',
-          entityId: 'inv-viol-1',
-          pillarId: 'saas_agency',
-          field: 'billedRevenue',
-          message: 'Billed revenue mismatch: sum of paid+sent ($1000) != billed ($2000)',
-          evidence: { expected: 1000, actual: 2000 },
-          detectedAt: '2026-03-07T12:00:00.000Z',
+          category: 'TEMPORAL_INTEGRITY',
+          pillarId: 'agency',
+          title: 'AgencyInvoice Billed Revenue Mismatch',
+          description: 'Billed revenue mismatch: sum of paid+sent ($1000) != billed ($2000)',
+          evidence: [
+            {
+              sourceType: 'DATA_QUALITY',
+              sourceId: 'inv-viol-1',
+              metricKey: 'billedRevenue',
+              value: 2000,
+            },
+          ],
         },
       ],
-      runAt: '2026-03-07T12:00:00.000Z',
     };
 
     const evaluation = evaluateAlerts({
@@ -258,7 +293,7 @@ describe('Alert Engine (Layer 5)', () => {
     expect(dqAlert).toBeDefined();
     expect(dqAlert?.severity).toBe('CRITICAL');
     expect(dqAlert?.title).toContain('AgencyInvoice');
-    expect(dqAlert?.evidenceIds).toContain('quality:dq-inv-1');
+    expect(dqAlert?.evidenceIds).toContain('data_quality:inv-viol-1');
   });
 
   it('generates alerts from TIME_MISMATCH and BUSINESS_EXCEPTION cross-pillar facts', () => {
@@ -266,20 +301,19 @@ describe('Alert Engine (Layer 5)', () => {
       {
         id: 'fact-tradeoff-1',
         type: 'TRADEOFF',
-        severity: 'SIGNIFICANT',
-        primaryPillars: ['saas_agency'],
-        secondaryPillars: ['fitness'],
-        statement: 'Agency received 30h while Fitness received 1h this week.',
+        severity: 'WARNING',
+        pillarIds: ['agency', 'fitness'],
+        title: 'Time Tradeoff: Agency vs Fitness',
+        description: 'Agency received 30h while Fitness received 1h this week.',
         evidence: [
           {
-            source: 'activity_event',
-            entityId: 'act-1',
-            pillarId: 'saas_agency',
-            description: '30h focus',
+            sourceType: 'ACTIVITY_EVENT',
+            sourceId: 'act-1',
+            value: 30,
           },
         ],
-        observationPeriod: currentPeriod,
-        generatedAt: '2026-03-07T12:00:00.000Z',
+        period: currentPeriod,
+        createdAt: '2026-03-07T12:00:00.000Z',
       },
     ];
 
@@ -295,7 +329,7 @@ describe('Alert Engine (Layer 5)', () => {
     const timeAlert = evaluation.alertsToUpsert.find(a => a.type === 'TIME_MISMATCH');
     expect(timeAlert).toBeDefined();
     expect(timeAlert?.severity).toBe('WARNING');
-    expect(timeAlert?.pillarIds).toContain('saas_agency');
+    expect(timeAlert?.pillarIds).toContain('agency');
     expect(timeAlert?.pillarIds).toContain('fitness');
   });
 });

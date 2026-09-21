@@ -281,7 +281,17 @@ describe('Cross-Pillar Intelligence Engine', () => {
         resolvedFeedback: 0,
         criticalOrHighFeedback: 0,
         feedbackByType: {} as any,
-      },
+        buildEffortScore: 80,
+        distributionEffortScore: 0,
+        buildRatioPercent: 100,
+        distributionRatioPercent: 0,
+        distributionVelocity: 0,
+        userGrowthRate: 0,
+        mrrGrowthRate: 0,
+        netRevenueRetention: 100,
+        feedbackResolutionRate: 100,
+        activeUsersRatio: 40,
+      } as any,
     };
 
     const facts = computeCrossPillarFacts({

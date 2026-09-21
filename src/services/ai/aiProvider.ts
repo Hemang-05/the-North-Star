@@ -40,12 +40,29 @@ export class GeminiProvider implements AIProvider {
         }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      let data: any;
+
+      if (!contentType.includes('application/json')) {
+        const text = await response.text();
+        if (text.includes('<!doctype') || text.includes('<html')) {
+          const err = new Error(
+            'The AI endpoint returned an HTML document instead of JSON. Ensure Vercel serverless functions are deployed and GEMINI_API_KEY is configured in Vercel Project Settings.'
+          );
+          (err as any).category = 'CONFIG_MISSING';
+          throw err;
+        }
+        const err = new Error(`AI endpoint returned non-JSON response (${response.status}): ${text.slice(0, 100)}`);
+        (err as any).category = 'SERVER_ERROR';
+        throw err;
+      }
+
+      data = await response.json();
 
       if (!response.ok || !data.success) {
         const errorMsg = data.error || `HTTP ${response.status}: Failed to generate AI analysis`;
         const err = new Error(errorMsg);
-        (err as any).category = data.category || 'SERVER_ERROR';
+        (err as any).category = data.category || (response.status === 503 ? 'CONFIG_MISSING' : 'SERVER_ERROR');
         throw err;
       }
 
@@ -62,7 +79,12 @@ export class GeminiProvider implements AIProvider {
       if (err instanceof Error && (err as any).category) {
         throw err;
       }
-      const networkError = new Error('AI analysis unavailable right now. Your underlying Personal OS data is unaffected.');
+      const msg = err instanceof Error ? err.message : String(err);
+      const networkError = new Error(
+        msg && !msg.includes('is not valid JSON')
+          ? msg
+          : 'AI analysis unavailable right now. Your underlying Personal OS data is unaffected.'
+      );
       (networkError as any).category = 'NETWORK_OFFLINE';
       throw networkError;
     }

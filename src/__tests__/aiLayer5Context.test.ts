@@ -28,140 +28,165 @@ describe('AI Layer 5 Context & Prompt Integration', () => {
   it('serializes Layer 5 structured facts and alerts into canonical AI user prompt', () => {
     const mockFact: CrossPillarFact = {
       id: 'fact-priority-1',
-      type: 'PRIORITY_MISMATCH',
-      severity: 'HIGH',
-      primaryPillars: ['job_hunt'],
-      secondaryPillars: ['trading_os'],
-      statement: 'Pillar job_hunt (priority #1) received 1.0h, while lower-priority pillar trading_os received 15.0h.',
-      evidence: [
-        {
-          source: 'activity_event',
-          entityId: 'act-1',
-          pillarId: 'job_hunt',
-          description: 'Job hunt focus',
-        },
-      ],
-      observationPeriod: {
-        start: '2026-03-01T00:00:00.000Z',
-        end: '2026-03-07T23:59:59.999Z',
-      },
-      generatedAt: '2026-03-07T12:00:00.000Z',
-    };
-
-    const mockAlert: Alert = {
-      id: 'alert:GOAL_REGRESSION:saas_agency:goal-agency-rev:2026-03-01_2026-03-07',
-      fingerprint: 'GOAL_REGRESSION:saas_agency:goal-agency-rev',
-      type: 'GOAL_REGRESSION',
+      type: 'PRIORITY_TIME_MISMATCH',
       severity: 'CRITICAL',
-      status: 'OPEN',
-      title: 'Goal Regressed: Agency Revenue',
-      message: 'Status changed from ON_TRACK to BEHIND',
-      evidenceIds: ['snapshot:snap-curr-1'],
-      pillarIds: ['saas_agency'],
+      pillarIds: ['job_hunt', 'trading_os'],
       period: {
-        start: '2026-03-01T00:00:00.000Z',
-        end: '2026-03-07T23:59:59.999Z',
-      },
-      firstDetectedAt: '2026-03-07T10:00:00.000Z',
-      lastDetectedAt: '2026-03-07T10:00:00.000Z',
-      occurrenceCount: 1,
-    };
-
-    const mockDataQuality: DataQualityReport = {
-      totalChecked: 25,
-      issuesBySeverity: { CRITICAL: 0, WARNING: 1, INFO: 0 },
-      issuesByType: {
-        INVALID_TIMESTAMP: 0,
-        ORPHANED_RELATION: 0,
-        NEGATIVE_AMOUNT: 0,
-        ZERO_VALUE_SUSPICION: 1,
-        DUPLICATE_ACTIVITY: 0,
-        FINANCIAL_INVARIANT_VIOLATION: 0,
-        CHRONOLOGY_VIOLATION: 0,
-      },
-      issues: [
-        {
-          id: 'dq-susp-1',
-          severity: 'WARNING',
-          type: 'ZERO_VALUE_SUSPICION',
-          entityType: 'AgencyClient',
-          entityId: 'client-1',
-          pillarId: 'saas_agency',
-          field: 'monthlyRetainer',
-          message: 'Active client has retainer of 0',
-          evidence: { monthlyRetainer: 0 },
-          detectedAt: '2026-03-07T12:00:00.000Z',
-        },
-      ],
-      runAt: '2026-03-07T12:00:00.000Z',
-    };
-
-    const context: AIContext = {
-      contextVersion: '1.0.0',
-      generatedAt: '2026-03-07T12:00:00.000Z',
-      period: {
+        type: 'WEEKLY',
         start: '2026-03-01T00:00:00.000Z',
         end: '2026-03-07T23:59:59.999Z',
         label: 'This Week',
       },
-      analysisMode: 'WEEKLY',
+      title: 'Priority Mismatch',
+      description: 'Pillar job_hunt (priority #1) received 1.0h, while lower-priority pillar trading_os received 15.0h.',
+      evidence: [
+        {
+          sourceType: 'ACTIVITY_EVENT',
+          sourceId: 'act-1',
+          metricKey: 'focus_hours',
+          value: 1.0,
+        },
+      ],
+      createdAt: '2026-03-07T12:00:00.000Z',
+    };
+
+    const mockAlert: Alert = {
+      id: 'alert:GOAL_REGRESSION:agency:goal-agency-rev:2026-03-01_2026-03-07',
+      fingerprint: 'GOAL_REGRESSION:agency:goal-agency-rev',
+      type: 'GOAL_REGRESSION',
+      severity: 'CRITICAL',
+      status: 'OPEN',
+      title: 'Goal Regressed: Agency Revenue',
+      description: 'Status changed from ON_TRACK to BEHIND',
+      message: 'Status changed from ON_TRACK to BEHIND',
+      evidenceIds: ['snapshot:snap-curr-1'],
+      evidence: [
+        {
+          sourceType: 'GOAL',
+          sourceId: 'goal-agency-rev',
+          value: 'BEHIND',
+        },
+      ],
+      pillarIds: ['agency'],
+      period: {
+        type: 'WEEKLY',
+        start: '2026-03-01T00:00:00.000Z',
+        end: '2026-03-07T23:59:59.999Z',
+        label: 'This Week',
+      },
+      detectedAt: '2026-03-07T10:00:00.000Z',
+      lastEvaluatedAt: '2026-03-07T10:00:00.000Z',
+      firstDetectedAt: '2026-03-07T10:00:00.000Z',
+      occurrenceCount: 1,
+    };
+
+    const mockDataQuality: DataQualityReport = {
+      checkedAt: '2026-03-07T12:00:00.000Z',
+      period: {
+        type: 'WEEKLY',
+        start: '2026-03-01T00:00:00.000Z',
+        end: '2026-03-07T23:59:59.999Z',
+        label: 'This Week',
+      },
+      summary: {
+        totalIssues: 1,
+        criticalCount: 0,
+        warningCount: 1,
+        infoCount: 0,
+        byCategory: {
+          COMPLETENESS: 0,
+          VALIDITY: 1,
+          CONSISTENCY: 0,
+          DUPLICATION: 0,
+          REFERENTIAL_INTEGRITY: 0,
+          TEMPORAL_INTEGRITY: 0,
+        },
+      },
+      issues: [
+        {
+          id: 'dq-susp-1',
+          category: 'VALIDITY',
+          severity: 'WARNING',
+          pillarId: 'agency',
+          title: 'Zero value suspicion',
+          description: 'Active client has retainer of 0',
+          evidence: [
+            {
+              sourceType: 'DATA_QUALITY',
+              sourceId: 'client-1',
+              metricKey: 'monthlyRetainer',
+              value: 0,
+            },
+          ],
+        },
+      ],
+    };
+
+    const context: AIContext = {
+      contextVersion: '4.0.0',
+      generatedAt: '2026-03-07T12:00:00.000Z',
+      period: {
+        type: 'WEEKLY',
+        start: '2026-03-01T00:00:00.000Z',
+        end: '2026-03-07T23:59:59.999Z',
+        label: 'This Week',
+      },
       northStar: {
-        currentCash: 5000,
-        targetCash: 10000,
-        agencyRealizedCash: 3000,
-        voireCashReceived: 2000,
+        title: 'Runway & Cash Goal',
+        target: 10000,
+        current: 5000,
+        gap: 5000,
+        progressPercent: 50,
         status: 'BEHIND',
-        currency: 'USD',
+        breakdown: {
+          agencyRealizedCash: 3000,
+          voireCashReceived: 2000,
+        },
       },
       goals: [],
       time: {
-        totalFocusMinutes: 1200,
-        totalDeepWorkMinutes: 800,
-        deepWorkRatio: 0.67,
-        distributionByPillar: {
-          job_hunt: 60,
-          saas_agency: 300,
-          trading_os: 500,
-          youtube: 100,
-          voire: 140,
-          fitness: 100,
+        summary: {
+          totalHours: 20,
+          totalMinutes: 1200,
+          sessionCount: 15,
+          deepWorkMinutes: 800,
+          deepWorkRatioPercent: 67,
+          priorityAlignedPercent: 75,
+          changePercent: null,
         },
+        pillars: [],
       },
       intelligence: {
-        overallVerdict: 'STABLE',
-        pillarVerdicts: {
-          job_hunt: 'AT_RISK',
-          saas_agency: 'ON_TRACK',
-          trading_os: 'AHEAD',
-          youtube: 'ON_TRACK',
-          voire: 'ON_TRACK',
-          fitness: 'ON_TRACK',
-        },
-        activeAnomalies: [],
+        comparisons: [],
+        trends: [],
+        anomalies: [],
+        pillarFacts: [],
       },
-      pillars: {} as any,
       crossPillarFacts: [mockFact],
       alerts: [mockAlert],
       dataQuality: {
         report: mockDataQuality,
-        summary: '25 checked, 1 issues (0 critical)',
+        summary: mockDataQuality.summary,
         issues: mockDataQuality.issues,
       },
       evidenceCatalog: [
         {
           id: 'crosspillar:fact-priority-1',
+          category: 'EFFICIENCY',
           label: 'Priority Mismatch: job_hunt vs trading_os',
           source: 'activity_event',
           value: 'job_hunt: 1.0h, trading_os: 15.0h',
         },
         {
-          id: 'alert:alert:GOAL_REGRESSION:saas_agency:goal-agency-rev:2026-03-01_2026-03-07',
+          id: 'alert:alert:GOAL_REGRESSION:agency:goal-agency-rev:2026-03-01_2026-03-07',
+          category: 'GOAL',
           label: 'Alert: Goal Regressed: Agency Revenue',
           source: 'goal',
           value: 'CRITICAL: Status changed from ON_TRACK to BEHIND',
         },
         {
           id: 'quality:dq-susp-1',
+          category: 'METRIC',
           label: 'Data Quality Warning: AgencyClient/monthlyRetainer',
           source: 'activity_event',
           value: 'Active client has retainer of 0',
@@ -173,11 +198,10 @@ describe('AI Layer 5 Context & Prompt Integration', () => {
 
     // Assert that Layer 5 facts and alerts appear in structured facts
     expect(userPrompt).toContain('crossPillarFacts');
-    expect(userPrompt).toContain('PRIORITY_MISMATCH');
+    expect(userPrompt).toContain('PRIORITY_TIME_MISMATCH');
     expect(userPrompt).toContain('alerts');
     expect(userPrompt).toContain('GOAL_REGRESSION');
     expect(userPrompt).toContain('dataQuality');
-    expect(userPrompt).toContain('25 checked, 1 issues');
 
     // Assert that Layer 5 evidence items appear in evidence catalog
     expect(userPrompt).toContain('crosspillar:fact-priority-1');

@@ -24,6 +24,7 @@ import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
 import { dbPut, dbDelete, dbGetAll, STORES } from '../../services/db';
 import type {
   JobOpportunity,
+  JobApplication,
   JobStage,
   WorkMode,
   InterviewRecord,
@@ -209,6 +210,32 @@ export function OpportunityManager({
           newId,
           { company: company.trim(), role: role.trim(), stage }
         );
+
+        if (stage === 'APPLIED') {
+          const appId = generateId('app');
+          const appRecord: JobApplication = {
+            id: appId,
+            opportunityId: newId,
+            company: company.trim(),
+            role: role.trim(),
+            appliedAt: timestamp,
+            method: source.trim() || 'Direct',
+            customizationLevel: 'TAILORED',
+            status: 'SUBMITTED',
+            notes: notes.trim() || undefined,
+          };
+          await dbPut(STORES.JOB_APPLICATIONS, appRecord);
+          await logEvent(
+            'job_hunt',
+            'JOB_APPLICATION_SUBMITTED',
+            1,
+            'apps',
+            'JOB_APPLICATION',
+            appId,
+            { company: company.trim(), role: role.trim() }
+          );
+        }
+
         showToast(`Added ${company} — ${role}`, 'success');
       }
 
@@ -233,7 +260,33 @@ export function OpportunityManager({
     await dbPut(STORES.JOB_OPPORTUNITIES, updated);
 
     // Contextual activity event
-    if (nextStage === 'INTERVIEW' || nextStage === 'SCREENING' || nextStage === 'FINAL_ROUND' || nextStage === 'ASSESSMENT') {
+    if (nextStage === 'APPLIED') {
+      const existingApps = await dbGetAll<JobApplication>(STORES.JOB_APPLICATIONS);
+      const alreadyHasApp = existingApps.some((a) => a.opportunityId === opp.id);
+      if (!alreadyHasApp) {
+        const appId = generateId('app');
+        const appRecord: JobApplication = {
+          id: appId,
+          opportunityId: opp.id,
+          company: opp.company,
+          role: opp.role,
+          appliedAt: now(),
+          method: opp.source || 'Direct',
+          customizationLevel: 'TAILORED',
+          status: 'SUBMITTED',
+        };
+        await dbPut(STORES.JOB_APPLICATIONS, appRecord);
+        await logEvent(
+          'job_hunt',
+          'JOB_APPLICATION_SUBMITTED',
+          1,
+          'apps',
+          'JOB_APPLICATION',
+          appId,
+          { company: opp.company, role: opp.role }
+        );
+      }
+    } else if (nextStage === 'INTERVIEW' || nextStage === 'SCREENING' || nextStage === 'FINAL_ROUND' || nextStage === 'ASSESSMENT') {
       await logEvent(
         'job_hunt',
         'JOB_INTERVIEW_BOOKED',

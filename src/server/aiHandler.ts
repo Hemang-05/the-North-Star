@@ -166,6 +166,12 @@ export type ValidateAnalyzeResult =
  * Reads HTTP request body with byte size bounds.
  */
 export async function readRequestBody(req: IncomingMessage, maxBytes: number): Promise<string> {
+  const anyReq = req as any;
+  if (anyReq.body !== undefined && anyReq.body !== null) {
+    if (typeof anyReq.body === 'string') return anyReq.body;
+    return JSON.stringify(anyReq.body);
+  }
+
   let bodyBuffer = '';
   let byteCount = 0;
 

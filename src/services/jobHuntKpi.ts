@@ -30,6 +30,9 @@ export interface JobHuntKpiSummary {
   totalOpportunities: number;
   activeOpportunities: number;
   archivedOpportunities: number; // REJECTED, WITHDRAWN, GHOSTED
+  opportunitiesToday: number;
+  opportunitiesThisWeek: number;
+  opportunitiesThisMonth: number;
   stageCounts: Record<JobStage, number>;
   stageDistribution: StageDistribution[];
 
@@ -48,6 +51,7 @@ export interface JobHuntKpiSummary {
   totalOutreach: number;
   outreachToday: number;
   outreachThisWeek: number;
+  outreachThisMonth: number;
   totalReplied: number;
   repliedThisWeek: number;
   responseRate: number | null; // safe percentage or null
@@ -186,30 +190,72 @@ export function calculateJobHuntKpis(params: {
     percentage: totalOpportunities > 0 ? ((stageCounts[s.stage] || 0) / totalOpportunities) * 100 : 0,
   }));
 
+  // --- Opportunities Velocity ---
+  let opportunitiesToday = 0;
+  let opportunitiesThisWeek = 0;
+  let opportunitiesThisMonth = 0;
+
+  for (const opp of opportunities) {
+    const oppDate = opp.createdAt || opp.discoveredAt || opp.updatedAt || '';
+    if (oppDate >= todayIso) opportunitiesToday++;
+    if (oppDate >= weekAgoIso) opportunitiesThisWeek++;
+    if (oppDate >= monthAgoIso) opportunitiesThisMonth++;
+  }
+
   // --- Applications ---
-  const totalApplications = applications.length;
-  let applicationsToday = 0;
-  let applicationsThisWeek = 0;
-  let applicationsThisMonth = 0;
+  const appliedOppIds = new Set<string>();
+  let appRecordsToday = 0;
+  let appRecordsThisWeek = 0;
+  let appRecordsThisMonth = 0;
   let quick = 0;
   let tailored = 0;
   let deep = 0;
 
   for (const app of applications) {
+    if (app.opportunityId) appliedOppIds.add(app.opportunityId);
     const appliedAt = app.appliedAt || '';
-    if (appliedAt >= todayIso) applicationsToday++;
-    if (appliedAt >= weekAgoIso) applicationsThisWeek++;
-    if (appliedAt >= monthAgoIso) applicationsThisMonth++;
+    if (appliedAt >= todayIso) appRecordsToday++;
+    if (appliedAt >= weekAgoIso) appRecordsThisWeek++;
+    if (appliedAt >= monthAgoIso) appRecordsThisMonth++;
 
     if (app.customizationLevel === 'QUICK') quick++;
     else if (app.customizationLevel === 'TAILORED') tailored++;
     else if (app.customizationLevel === 'DEEP') deep++;
   }
 
+  // Also count opportunities that have reached APPLIED or subsequent active stages
+  let oppAppliedCount = 0;
+  let oppAppliedToday = 0;
+  let oppAppliedThisWeek = 0;
+  let oppAppliedThisMonth = 0;
+
+  for (const opp of opportunities) {
+    if (!appliedOppIds.has(opp.id)) {
+      const isApplied = opp.stage !== 'DISCOVERED';
+      if (isApplied) {
+        oppAppliedCount++;
+        const oppDate = opp.updatedAt || opp.createdAt || opp.discoveredAt || '';
+        if (oppDate >= todayIso) oppAppliedToday++;
+        if (oppDate >= weekAgoIso) oppAppliedThisWeek++;
+        if (oppDate >= monthAgoIso) oppAppliedThisMonth++;
+      }
+    }
+  }
+
+  const explicitAppCount = applications.length;
+  const combinedAppCount = explicitAppCount + oppAppliedCount;
+  // If user logged jobs in pipeline, ensure totalApplications reflects active logged roles if explicit apps are 0
+  const totalApplications = combinedAppCount > 0 ? combinedAppCount : opportunities.length;
+
+  const applicationsToday = combinedAppCount > 0 ? (appRecordsToday + oppAppliedToday) : opportunitiesToday;
+  const applicationsThisWeek = combinedAppCount > 0 ? (appRecordsThisWeek + oppAppliedThisWeek) : opportunitiesThisWeek;
+  const applicationsThisMonth = combinedAppCount > 0 ? (appRecordsThisMonth + oppAppliedThisMonth) : opportunitiesThisMonth;
+
   // --- Outreach ---
   const totalOutreach = outreaches.length;
   let outreachToday = 0;
   let outreachThisWeek = 0;
+  let outreachThisMonth = 0;
   let totalReplied = 0;
   let repliedThisWeek = 0;
 
@@ -217,6 +263,7 @@ export function calculateJobHuntKpis(params: {
     const sentAt = out.sentAt || '';
     if (sentAt >= todayIso) outreachToday++;
     if (sentAt >= weekAgoIso) outreachThisWeek++;
+    if (sentAt >= monthAgoIso) outreachThisMonth++;
 
     if (out.repliedAt) {
       totalReplied++;
@@ -258,42 +305,30 @@ export function calculateJobHuntKpis(params: {
 
   for (const s of focusSessions) {
     if (s.pillarId !== 'job_hunt' || s.status !== 'STOPPED') continue;
-    const dur = s.durationSeconds || 0;
-    focusTimeTotalSeconds += dur;
+    const duration = s.durationSeconds || 0;
+    focusTimeTotalSeconds += duration;
 
-    if (s.startedAt >= todayIso) focusTimeTodaySeconds += dur;
-    if (s.startedAt >= weekAgoIso) focusTimeThisWeekSeconds += dur;
+    const startedAt = s.startedAt || '';
+    if (startedAt >= todayIso) focusTimeTodaySeconds += duration;
+    if (startedAt >= weekAgoIso) focusTimeThisWeekSeconds += duration;
 
     const cat = s.category || 'General';
-    focusTimeByCategory[cat] = (focusTimeByCategory[cat] || 0) + dur;
+    focusTimeByCategory[cat] = (focusTimeByCategory[cat] || 0) + duration;
   }
 
-  // --- Consistency (Distinct Active Days in last 7 days) ---
+  // --- Active Days This Week ---
   const activeDaysSet = new Set<string>();
-
-  for (const app of applications) {
-    if (app.appliedAt >= weekAgoIso) {
-      activeDaysSet.add(app.appliedAt.slice(0, 10));
-    }
-  }
-  for (const out of outreaches) {
-    if (out.sentAt >= weekAgoIso) {
-      activeDaysSet.add(out.sentAt.slice(0, 10));
+  for (const ev of events) {
+    const occurredAt = ev.occurredAt || '';
+    if (occurredAt >= weekAgoIso) {
+      activeDaysSet.add(occurredAt.slice(0, 10));
     }
   }
   for (const s of focusSessions) {
-    if (s.pillarId === 'job_hunt' && s.startedAt >= weekAgoIso) {
-      activeDaysSet.add(s.startedAt.slice(0, 10));
-    }
-  }
-  for (const ev of events) {
-    if (ev.pillarId === 'job_hunt' && ev.occurredAt >= weekAgoIso) {
-      activeDaysSet.add(ev.occurredAt.slice(0, 10));
-    }
-  }
-  for (const iv of interviews) {
-    if (iv.scheduledAt >= weekAgoIso) {
-      activeDaysSet.add(iv.scheduledAt.slice(0, 10));
+    if (s.pillarId !== 'job_hunt') continue;
+    const startedAt = s.startedAt || '';
+    if (startedAt >= weekAgoIso) {
+      activeDaysSet.add(startedAt.slice(0, 10));
     }
   }
 
@@ -311,6 +346,9 @@ export function calculateJobHuntKpis(params: {
     totalOpportunities,
     activeOpportunities,
     archivedOpportunities,
+    opportunitiesToday,
+    opportunitiesThisWeek,
+    opportunitiesThisMonth,
     stageCounts,
     stageDistribution,
     totalApplications,
@@ -321,6 +359,7 @@ export function calculateJobHuntKpis(params: {
     totalOutreach,
     outreachToday,
     outreachThisWeek,
+    outreachThisMonth,
     totalReplied,
     repliedThisWeek,
     responseRate,
@@ -360,14 +399,39 @@ export async function syncJobHuntGoalValues(kpis: JobHuntKpiSummary): Promise<vo
       const unit = (goal.unit || '').toLowerCase();
       let newVal = goal.currentComputedValue;
 
-      if (title.includes('application') || unit.includes('app')) {
-        if (goal.cadence === 'DAILY') newVal = kpis.applicationsToday;
-        else if (goal.cadence === 'WEEKLY') newVal = kpis.applicationsThisWeek;
-        else if (goal.cadence === 'MONTHLY') newVal = kpis.applicationsThisMonth;
-        else newVal = kpis.totalApplications;
-      } else if (title.includes('outreach') || unit.includes('message')) {
+      if (
+        title.includes('application') ||
+        title.includes('applied') ||
+        title.includes('job') ||
+        title.includes('role') ||
+        unit.includes('app') ||
+        unit.includes('job') ||
+        unit.includes('role')
+      ) {
+        if (goal.cadence === 'DAILY') {
+          newVal = Math.max(kpis.applicationsToday, kpis.opportunitiesToday ?? 0);
+        } else if (goal.cadence === 'WEEKLY') {
+          newVal = Math.max(kpis.applicationsThisWeek, kpis.opportunitiesThisWeek ?? 0);
+        } else if (goal.cadence === 'MONTHLY') {
+          newVal = Math.max(kpis.applicationsThisMonth, kpis.opportunitiesThisMonth ?? 0);
+        } else {
+          newVal = Math.max(kpis.totalApplications, kpis.totalOpportunities);
+        }
+      } else if (
+        title.includes('outreach') ||
+        title.includes('message') ||
+        title.includes('dm') ||
+        title.includes('mail') ||
+        title.includes('email') ||
+        title.includes('contact') ||
+        unit.includes('message') ||
+        unit.includes('dm') ||
+        unit.includes('mail') ||
+        unit.includes('outreach')
+      ) {
         if (goal.cadence === 'DAILY') newVal = kpis.outreachToday;
         else if (goal.cadence === 'WEEKLY') newVal = kpis.outreachThisWeek;
+        else if (goal.cadence === 'MONTHLY') newVal = kpis.outreachThisMonth ?? kpis.totalOutreach;
         else newVal = kpis.totalOutreach;
       } else if (title.includes('interview') || title.includes('screening')) {
         newVal = kpis.interviewsReached;

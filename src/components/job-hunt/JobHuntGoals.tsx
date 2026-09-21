@@ -57,16 +57,42 @@ export function computeGoalCurrentValue(goal: Goal, kpis: JobHuntKpiSummary): nu
   const title = (goal.title || '').toLowerCase();
   const unit = (goal.unit || '').toLowerCase();
 
-  if (title.includes('application') || unit.includes('app')) {
-    if (goal.cadence === 'DAILY') return kpis.applicationsToday;
-    if (goal.cadence === 'WEEKLY') return kpis.applicationsThisWeek;
-    if (goal.cadence === 'MONTHLY') return kpis.applicationsThisMonth;
-    return kpis.totalApplications;
+  if (
+    title.includes('application') ||
+    title.includes('applied') ||
+    title.includes('job') ||
+    title.includes('role') ||
+    unit.includes('app') ||
+    unit.includes('job') ||
+    unit.includes('role')
+  ) {
+    if (goal.cadence === 'DAILY') {
+      return Math.max(kpis.applicationsToday, kpis.opportunitiesToday ?? 0);
+    }
+    if (goal.cadence === 'WEEKLY') {
+      return Math.max(kpis.applicationsThisWeek, kpis.opportunitiesThisWeek ?? 0);
+    }
+    if (goal.cadence === 'MONTHLY') {
+      return Math.max(kpis.applicationsThisMonth, kpis.opportunitiesThisMonth ?? 0);
+    }
+    return Math.max(kpis.totalApplications, kpis.totalOpportunities);
   }
 
-  if (title.includes('outreach') || unit.includes('message')) {
+  if (
+    title.includes('outreach') ||
+    title.includes('message') ||
+    title.includes('dm') ||
+    title.includes('mail') ||
+    title.includes('email') ||
+    title.includes('contact') ||
+    unit.includes('message') ||
+    unit.includes('dm') ||
+    unit.includes('mail') ||
+    unit.includes('outreach')
+  ) {
     if (goal.cadence === 'DAILY') return kpis.outreachToday;
     if (goal.cadence === 'WEEKLY') return kpis.outreachThisWeek;
+    if (goal.cadence === 'MONTHLY') return kpis.outreachThisMonth ?? kpis.totalOutreach;
     return kpis.totalOutreach;
   }
 
