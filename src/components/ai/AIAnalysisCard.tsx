@@ -138,7 +138,11 @@ export function AIAnalysisCard({
               </h3>
               {sourceInfo && (
                 <span className="badge badge-neutral" style={{ fontSize: 10, padding: '2px 6px' }}>
-                  {sourceInfo.provider === 'cached' ? '⚡ Cached' : `gemini-3.7-flash (${sourceInfo.latencyMs}ms)`}
+                  {sourceInfo.provider === 'cached'
+                    ? '⚡ Cached'
+                    : sourceInfo.provider === 'offline-deterministic'
+                    ? '⚡ Strategic Engine (Deterministic)'
+                    : `${sourceInfo.model} (${sourceInfo.latencyMs}ms)`}
                 </span>
               )}
             </div>

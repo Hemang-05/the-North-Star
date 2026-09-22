@@ -19,6 +19,7 @@ import type { TimePeriodType } from '../../types/intelligence';
 import type { AIProvider } from './aiProvider';
 import { GeminiProvider } from './aiProvider';
 import { buildCanonicalAIContext } from './aiContextBuilder';
+import { generateDeterministicAnalysis } from './deterministicAiFallback';
 import { dbGetAll, dbPut, STORES } from '../db';
 
 /**
@@ -161,7 +162,7 @@ export class AIService {
       }
     }
 
-    // 4. Invoke configured provider
+    // 4. Invoke configured provider with deterministic fallback
     const request: AIRequest = {
       mode,
       context,
@@ -171,7 +172,26 @@ export class AIService {
       forceRegenerate,
     };
 
-    const response = await this.provider.generateAnalysis(request);
+    let response: AIResponse;
+    try {
+      response = await this.provider.generateAnalysis(request);
+    } catch (providerErr: unknown) {
+      const errMsg = providerErr instanceof Error ? providerErr.message : String(providerErr);
+      console.warn(`[AIService] Live provider unavailable ("${errMsg}"). Seamlessly engaging Deterministic Strategic Engine fallback.`);
+
+      const deterministic = generateDeterministicAnalysis(context, mode);
+      response = {
+        analysis: deterministic,
+        provider: 'offline-deterministic',
+        model: 'deterministic-rules-engine',
+        mode,
+        latencyMs: 15,
+        contextHash,
+        userQueryHash,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
     response.contextHash = contextHash;
     response.userQueryHash = userQueryHash;
 
