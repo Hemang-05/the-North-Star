@@ -1,17 +1,14 @@
-// ============================================================================
-// PERSONAL OS — Lead Manager (Pipeline Kanban + Table)
-// Visual lead pipeline with stage progression and convert-to-client flow.
-// ============================================================================
-
 import { useState } from 'react';
 import {
   Plus, Users, ArrowRight, UserCheck, X, Trash2,
+  ChevronDown, ChevronRight, Clock, Calendar,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';
 import type { AgencyLead, AgencyClient, LeadStage } from '../../types';
 import { ALL_LEAD_STAGES, ACTIVE_LEAD_STAGES } from '../../services/agencyKpi';
-import { generateId, now, formatINR, timeAgo } from '../../utils/helpers';
+import { generateId, now, formatINR, formatDate, timeAgo } from '../../utils/helpers';
+import { groupAndStackByDate } from '../../utils/dateFolding';
 import { showToast } from '../Toast';
 
 interface LeadManagerProps {
@@ -40,6 +37,18 @@ export function LeadManager({ leads, clients: _clients, onConvertToClient }: Lea
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewMode, setViewMode] = useState<'KANBAN' | 'TABLE'>('KANBAN');
   const [selectedLead, setSelectedLead] = useState<AgencyLead | null>(null);
+
+  // Date folds state for Kanban columns (foldId -> collapsed boolean)
+  const [collapsedFolds, setCollapsedFolds] = useState<Record<string, boolean>>({});
+
+  const toggleFold = (foldKey: string) => {
+    setCollapsedFolds((prev) => ({
+      ...prev,
+      [foldKey]: !prev[foldKey],
+    }));
+  };
+
+  const getLeadDate = (lead: AgencyLead) => lead.discoveredAt || lead.createdAt || lead.updatedAt;
 
   // New lead form state
   const [newLead, setNewLead] = useState({
@@ -181,6 +190,8 @@ export function LeadManager({ leads, clients: _clients, onConvertToClient }: Lea
         }}>
           {activeCols.map(col => {
             const columnLeads = leads.filter(l => l.stage === col.stage);
+            const dateFolds = groupAndStackByDate(columnLeads, getLeadDate);
+
             return (
               <div key={col.stage} style={{
                 minHeight: 200,
@@ -188,11 +199,14 @@ export function LeadManager({ leads, clients: _clients, onConvertToClient }: Lea
                 borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border-subtle)',
                 padding: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
               }}>
                 {/* Column Header */}
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  marginBottom: 12, paddingBottom: 8, borderBottom: `2px solid ${col.color}`,
+                  paddingBottom: 8, borderBottom: `2px solid ${col.color}`,
                 }}>
                   <span style={{ fontSize: '12px', fontWeight: 600, color: col.color }}>
                     {col.label}
@@ -205,82 +219,171 @@ export function LeadManager({ leads, clients: _clients, onConvertToClient }: Lea
                   </span>
                 </div>
 
-                {/* Lead Cards */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {columnLeads.map(lead => {
-                    const nextStage = getNextStage(lead.stage);
-                    return (
-                      <div
-                        key={lead.id}
-                        onClick={() => setSelectedLead(lead)}
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: 'var(--radius-sm)',
-                          background: 'var(--bg-primary)',
-                          border: '1px solid var(--border-subtle)',
-                          cursor: 'pointer',
-                          transition: 'border-color 0.15s ease',
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.borderColor = col.color)}
-                        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
-                      >
-                        <div style={{ fontWeight: 600, fontSize: '12px', marginBottom: 4 }}>
-                          {lead.companyName}
-                        </div>
-                        {lead.contactPerson && (
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: 4 }}>
-                            {lead.contactPerson}
+                {/* Lead Cards grouped into date folds */}
+                {columnLeads.length === 0 ? (
+                  <div style={{
+                    padding: '24px 8px',
+                    textAlign: 'center',
+                    color: 'var(--text-muted)',
+                    fontSize: '11px',
+                    border: '1px dashed var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                  }}>
+                    No leads
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {dateFolds.map(fold => {
+                      const foldId = `${col.stage}-${fold.key}`;
+                      const isFoldCollapsed = collapsedFolds[foldId] ?? false;
+
+                      return (
+                        <div key={fold.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {/* Date Fold Header */}
+                          <div
+                            onClick={() => toggleFold(foldId)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                toggleFold(foldId);
+                              }
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '4px 6px',
+                              borderRadius: 'var(--radius-sm)',
+                              background: isFoldCollapsed ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.04)',
+                              border: '1px solid var(--border-subtle)',
+                              cursor: 'pointer',
+                              userSelect: 'none',
+                              fontSize: '10px',
+                            }}
+                            title={`${isFoldCollapsed ? 'Expand' : 'Collapse'} ${fold.label}`}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                              {isFoldCollapsed ? (
+                                <ChevronRight size={10} style={{ color: 'var(--text-muted)' }} />
+                              ) : (
+                                <ChevronDown size={10} style={{ color: 'var(--text-muted)' }} />
+                              )}
+                              <Calendar size={10} style={{ color: col.color }} />
+                              <span>{fold.label}</span>
+                            </div>
+                            <span style={{
+                              fontSize: '9px', fontFamily: 'var(--font-mono)',
+                              padding: '0 4px', borderRadius: 6,
+                              background: 'rgba(255, 255, 255, 0.06)',
+                              color: 'var(--text-muted)',
+                            }}>
+                              {fold.items.length}
+                            </span>
                           </div>
-                        )}
-                        {lead.estimatedDealValue && (
-                          <div style={{
-                            fontSize: '11px', fontFamily: 'var(--font-mono)',
-                            color: '#22c55e', marginBottom: 6,
-                          }}>
-                            {formatINR(lead.estimatedDealValue)}
-                          </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                            {lead.source}
-                          </span>
-                          {nextStage && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleStageChange(lead, nextStage);
-                              }}
-                              style={{
-                                padding: '2px 6px', borderRadius: 4, border: 'none',
-                                background: `${col.color}20`, color: col.color,
-                                fontSize: '10px', cursor: 'pointer', display: 'flex',
-                                alignItems: 'center', gap: 2,
-                              }}
-                            >
-                              <ArrowRight size={10} />
-                            </button>
-                          )}
-                          {lead.stage === 'WON' && !lead.clientId && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onConvertToClient(lead);
-                              }}
-                              style={{
-                                padding: '2px 8px', borderRadius: 4, border: 'none',
-                                background: 'rgba(34, 197, 94, 0.2)', color: '#22c55e',
-                                fontSize: '10px', cursor: 'pointer', fontWeight: 600,
-                                display: 'flex', alignItems: 'center', gap: 4,
-                              }}
-                            >
-                              <UserCheck size={10} /> Convert
-                            </button>
+
+                          {/* Tickets inside fold (latest on top) */}
+                          {!isFoldCollapsed && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {fold.items.map(lead => {
+                                const nextStage = getNextStage(lead.stage);
+                                const leadDate = getLeadDate(lead);
+                                return (
+                                  <div
+                                    key={lead.id}
+                                    onClick={() => setSelectedLead(lead)}
+                                    style={{
+                                      padding: '10px 12px',
+                                      borderRadius: 'var(--radius-sm)',
+                                      background: 'var(--bg-primary)',
+                                      border: '1px solid var(--border-subtle)',
+                                      cursor: 'pointer',
+                                      transition: 'border-color 0.15s ease',
+                                    }}
+                                    onMouseEnter={e => (e.currentTarget.style.borderColor = col.color)}
+                                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-subtle)')}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                                      <div style={{ fontWeight: 600, fontSize: '12px' }}>
+                                        {lead.companyName}
+                                      </div>
+                                      <span
+                                        title={`Logged: ${formatDate(leadDate)}`}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: 3,
+                                          fontSize: '9px',
+                                          color: 'var(--text-muted)',
+                                          fontFamily: 'var(--font-mono)',
+                                        }}
+                                      >
+                                        <Clock size={8} />
+                                        {timeAgo(leadDate)}
+                                      </span>
+                                    </div>
+
+                                    {lead.contactPerson && (
+                                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: 4 }}>
+                                        {lead.contactPerson}
+                                      </div>
+                                    )}
+                                    {lead.estimatedDealValue && (
+                                      <div style={{
+                                        fontSize: '11px', fontFamily: 'var(--font-mono)',
+                                        color: '#22c55e', marginBottom: 6,
+                                      }}>
+                                        {formatINR(lead.estimatedDealValue)}
+                                      </div>
+                                    )}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                        {lead.source}
+                                      </span>
+                                      {nextStage && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleStageChange(lead, nextStage);
+                                          }}
+                                          style={{
+                                            padding: '2px 6px', borderRadius: 4, border: 'none',
+                                            background: `${col.color}20`, color: col.color,
+                                            fontSize: '10px', cursor: 'pointer', display: 'flex',
+                                            alignItems: 'center', gap: 2,
+                                          }}
+                                        >
+                                          <ArrowRight size={10} />
+                                        </button>
+                                      )}
+                                      {lead.stage === 'WON' && !lead.clientId && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onConvertToClient(lead);
+                                          }}
+                                          style={{
+                                            padding: '2px 8px', borderRadius: 4, border: 'none',
+                                            background: 'rgba(34, 197, 94, 0.2)', color: '#22c55e',
+                                            fontSize: '10px', cursor: 'pointer', fontWeight: 600,
+                                            display: 'flex', alignItems: 'center', gap: 4,
+                                          }}
+                                        >
+                                          <UserCheck size={10} /> Convert
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           )}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -295,6 +398,8 @@ export function LeadManager({ leads, clients: _clients, onConvertToClient }: Lea
           }}>
             {terminalWithLeads.map(col => {
               const columnLeads = leads.filter(l => l.stage === col.stage);
+              const dateFolds = groupAndStackByDate(columnLeads, getLeadDate);
+
               return (
                 <div key={col.stage} style={{
                   minHeight: 80,
@@ -319,28 +424,38 @@ export function LeadManager({ leads, clients: _clients, onConvertToClient }: Lea
                     </span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {columnLeads.map(lead => (
-                      <div
-                        key={lead.id}
-                        onClick={() => setSelectedLead(lead)}
-                        style={{
-                          padding: '6px 10px',
-                          borderRadius: 'var(--radius-sm)',
-                          background: 'var(--bg-primary)',
-                          border: '1px solid var(--border-subtle)',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                        }}
-                      >
-                        <span style={{ fontWeight: 600 }}>{lead.companyName}</span>
-                        {lead.estimatedDealValue && (
-                          <span style={{
-                            marginLeft: 8, fontFamily: 'var(--font-mono)',
-                            color: 'var(--text-muted)', fontSize: '10px',
-                          }}>
-                            {formatINR(lead.estimatedDealValue)}
-                          </span>
-                        )}
+                    {dateFolds.map(fold => (
+                      <div key={fold.key} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                          {fold.label}
+                        </div>
+                        {fold.items.map(lead => (
+                          <div
+                            key={lead.id}
+                            onClick={() => setSelectedLead(lead)}
+                            style={{
+                              padding: '6px 10px',
+                              borderRadius: 'var(--radius-sm)',
+                              background: 'var(--bg-primary)',
+                              border: '1px solid var(--border-subtle)',
+                              cursor: 'pointer',
+                              fontSize: '11px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <span style={{ fontWeight: 600 }}>{lead.companyName}</span>
+                            {lead.estimatedDealValue && (
+                              <span style={{
+                                fontFamily: 'var(--font-mono)',
+                                color: 'var(--text-muted)', fontSize: '10px',
+                              }}>
+                                {formatINR(lead.estimatedDealValue)}
+                              </span>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     ))}
                   </div>

@@ -7,12 +7,14 @@ import { useState } from 'react';
 import {
   Plus,
   Filter, LayoutGrid, List, Trash2, X,
+  ChevronDown, ChevronRight, Clock, Calendar,
 } from 'lucide-react';
 import { useStore, logEvent } from '../../hooks/useDatabase';
 import { STORES } from '../../services/db';
 import type { SaasFeature, FeatureStatus, FeaturePriority, SaasTestRun } from '../../types';
 import { ALL_FEATURE_STATUSES } from '../../services/saasKpi';
-import { generateId, now, formatDate } from '../../utils/helpers';
+import { generateId, now, formatDate, timeAgo } from '../../utils/helpers';
+import { groupAndStackByDate } from '../../utils/dateFolding';
 import { showToast } from '../Toast';
 
 interface FeatureManagerProps {
@@ -43,6 +45,18 @@ export function FeatureManager({ features, tests, onSelectFeature }: FeatureMana
   const [viewMode, setViewMode] = useState<'KANBAN' | 'LIST'>('KANBAN');
   const [filterPriority, setFilterPriority] = useState<string>('ALL');
   const [selectedFeature, setSelectedFeature] = useState<SaasFeature | null>(null);
+
+  // Date folds state for Kanban columns (foldId -> collapsed boolean)
+  const [collapsedFolds, setCollapsedFolds] = useState<Record<string, boolean>>({});
+
+  const toggleFold = (foldKey: string) => {
+    setCollapsedFolds((prev) => ({
+      ...prev,
+      [foldKey]: !prev[foldKey],
+    }));
+  };
+
+  const getFeatureDate = (feat: SaasFeature) => feat.createdAt || feat.updatedAt;
 
   // New feature form state
   const [form, setForm] = useState({
@@ -207,6 +221,8 @@ export function FeatureManager({ features, tests, onSelectFeature }: FeatureMana
           }}>
           {STATUS_COLUMNS.map((col) => {
             const colFeatures = filteredFeatures.filter((f) => f.status === col.status);
+            const dateFolds = groupAndStackByDate(colFeatures, getFeatureDate);
+
             return (
               <div
                 key={col.status}
@@ -218,7 +234,7 @@ export function FeatureManager({ features, tests, onSelectFeature }: FeatureMana
                   minHeight: 320,
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: 8,
+                  gap: 10,
                 }}
               >
                 {/* Column header */}
@@ -237,101 +253,179 @@ export function FeatureManager({ features, tests, onSelectFeature }: FeatureMana
                   </span>
                 </div>
 
-                {/* Cards */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {colFeatures.map((feat) => {
-                    const featTests = tests.filter((t) => t.featureId === feat.id);
-                    const pBadge = PRIORITY_BADGES[feat.priority] || PRIORITY_BADGES.P2;
-                    return (
-                      <div
-                        key={feat.id}
-                        className="card"
-                        style={{
-                          padding: 12,
-                          background: 'rgba(255, 255, 255, 0.03)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          border: feat.status === 'BLOCKED' ? '1px solid rgba(239, 68, 68, 0.3)' : undefined,
-                        }}
-                        onClick={() => {
-                          setSelectedFeature(feat);
-                          onSelectFeature?.(feat);
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6, marginBottom: 6 }}>
-                          <span style={{
-                            fontSize: '9px', padding: '2px 6px', borderRadius: 4,
-                            background: pBadge.bg, color: pBadge.color, fontWeight: 700,
-                          }}>
-                            {pBadge.label}
-                          </span>
-                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                            {feat.category}
-                          </span>
-                        </div>
+                {/* Cards grouped into date folds */}
+                {colFeatures.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center', padding: '28px 8px', color: 'var(--text-muted)',
+                    fontSize: '11px', fontStyle: 'italic',
+                    border: '1px dashed rgba(255, 255, 255, 0.06)',
+                    borderRadius: 'var(--radius-sm)',
+                  }}>
+                    No features
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {dateFolds.map((fold) => {
+                      const foldId = `${col.status}-${fold.key}`;
+                      const isFoldCollapsed = collapsedFolds[foldId] ?? false;
 
-                        <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
-                          {feat.name}
-                        </div>
-
-                        {feat.description && (
-                          <div style={{
-                            fontSize: '11px', color: 'var(--text-secondary)',
-                            lineHeight: 1.4, marginBottom: 8,
-                            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                          }}>
-                            {feat.description}
-                          </div>
-                        )}
-
-                        {/* Associated test info */}
-                        <div style={{
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          marginTop: 8, paddingTop: 6, borderTop: '1px solid rgba(255, 255, 255, 0.04)',
-                          fontSize: '10px', color: 'var(--text-muted)',
-                        }}>
-                          <span>
-                            {featTests.length > 0 ? (
-                              <span style={{ color: featTests.some((t) => t.result === 'FAIL') ? '#ef4444' : '#22c55e' }}>
-                                ✓ {featTests.length} test{featTests.length > 1 ? 's' : ''}
-                              </span>
-                            ) : (
-                              'No tests'
-                            )}
-                          </span>
-
-                          {/* Quick stage selector */}
-                          <select
-                            value={feat.status}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(feat, e.target.value as FeatureStatus);
+                      return (
+                        <div key={fold.key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {/* Date Fold Header */}
+                          <div
+                            onClick={() => toggleFold(foldId)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                toggleFold(foldId);
+                              }
                             }}
-                            className="input"
                             style={{
-                              padding: '2px 4px', fontSize: '9px', width: 'auto',
-                              background: 'transparent', border: '1px solid rgba(255, 255, 255, 0.1)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '4px 6px',
+                              borderRadius: 'var(--radius-sm)',
+                              background: isFoldCollapsed ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.04)',
+                              border: '1px solid rgba(255, 255, 255, 0.06)',
+                              cursor: 'pointer',
+                              userSelect: 'none',
+                              fontSize: '10px',
                             }}
-                            onClick={(e) => e.stopPropagation()}
+                            title={`${isFoldCollapsed ? 'Expand' : 'Collapse'} ${fold.label}`}
                           >
-                            {ALL_FEATURE_STATUSES.map((s) => (
-                              <option key={s} value={s}>→ {s.replace('_', ' ')}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    );
-                  })}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                              {isFoldCollapsed ? (
+                                <ChevronRight size={10} style={{ color: 'var(--text-muted)' }} />
+                              ) : (
+                                <ChevronDown size={10} style={{ color: 'var(--text-muted)' }} />
+                              )}
+                              <Calendar size={10} style={{ color: col.color }} />
+                              <span>{fold.label}</span>
+                            </div>
+                            <span style={{
+                              fontSize: '9px', fontFamily: 'var(--font-mono)',
+                              padding: '0 4px', borderRadius: 6,
+                              background: 'rgba(255, 255, 255, 0.06)',
+                              color: 'var(--text-muted)',
+                            }}>
+                              {fold.items.length}
+                            </span>
+                          </div>
 
-                  {colFeatures.length === 0 && (
-                    <div style={{
-                      textAlign: 'center', padding: '24px 8px', color: 'var(--text-muted)',
-                      fontSize: '11px', fontStyle: 'italic',
-                    }}>
-                      No features
-                    </div>
-                  )}
-                </div>
+                          {/* Tickets inside fold (latest on top) */}
+                          {!isFoldCollapsed && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              {fold.items.map((feat) => {
+                                const featTests = tests.filter((t) => t.featureId === feat.id);
+                                const pBadge = PRIORITY_BADGES[feat.priority] || PRIORITY_BADGES.P2;
+                                const featDate = getFeatureDate(feat);
+
+                                return (
+                                  <div
+                                    key={feat.id}
+                                    className="card"
+                                    style={{
+                                      padding: 12,
+                                      background: 'rgba(255, 255, 255, 0.03)',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s ease',
+                                      border: feat.status === 'BLOCKED' ? '1px solid rgba(239, 68, 68, 0.3)' : undefined,
+                                    }}
+                                    onClick={() => {
+                                      setSelectedFeature(feat);
+                                      onSelectFeature?.(feat);
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6, marginBottom: 6 }}>
+                                      <span style={{
+                                        fontSize: '9px', padding: '2px 6px', borderRadius: 4,
+                                        background: pBadge.bg, color: pBadge.color, fontWeight: 700,
+                                      }}>
+                                        {pBadge.label}
+                                      </span>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                          {feat.category}
+                                        </span>
+                                        <span
+                                          title={`Logged: ${formatDate(featDate)}`}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 3,
+                                            fontSize: '9px',
+                                            color: 'var(--text-muted)',
+                                            fontFamily: 'var(--font-mono)',
+                                          }}
+                                        >
+                                          <Clock size={8} />
+                                          {timeAgo(featDate)}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+                                      {feat.name}
+                                    </div>
+
+                                    {feat.description && (
+                                      <div style={{
+                                        fontSize: '11px', color: 'var(--text-secondary)',
+                                        lineHeight: 1.4, marginBottom: 8,
+                                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                                      }}>
+                                        {feat.description}
+                                      </div>
+                                    )}
+
+                                    {/* Associated test info */}
+                                    <div style={{
+                                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                      marginTop: 8, paddingTop: 6, borderTop: '1px solid rgba(255, 255, 255, 0.04)',
+                                      fontSize: '10px', color: 'var(--text-muted)',
+                                    }}>
+                                      <span>
+                                        {featTests.length > 0 ? (
+                                          <span style={{ color: featTests.some((t) => t.result === 'FAIL') ? '#ef4444' : '#22c55e' }}>
+                                            ✓ {featTests.length} test{featTests.length > 1 ? 's' : ''}
+                                          </span>
+                                        ) : (
+                                          'No tests'
+                                        )}
+                                      </span>
+
+                                      {/* Quick stage selector */}
+                                      <select
+                                        value={feat.status}
+                                        onChange={(e) => {
+                                          e.stopPropagation();
+                                          handleStatusChange(feat, e.target.value as FeatureStatus);
+                                        }}
+                                        className="input"
+                                        style={{
+                                          padding: '2px 4px', fontSize: '9px', width: 'auto',
+                                          background: 'transparent', border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {ALL_FEATURE_STATUSES.map((s) => (
+                                          <option key={s} value={s}>→ {s.replace('_', ' ')}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}

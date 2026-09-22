@@ -18,6 +18,10 @@ import {
   Send,
   MessageSquare,
   Calendar,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Layers,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { logEvent, notifyDataChange } from '../../hooks/useDatabase';
@@ -32,7 +36,8 @@ import type {
   InterviewOutcome,
 } from '../../types';
 import { ALL_JOB_STAGES } from '../../services/jobHuntKpi';
-import { generateId, now, timeAgo, formatINR, todayDate } from '../../utils/helpers';
+import { generateId, now, timeAgo, formatINR, formatDate, todayDate } from '../../utils/helpers';
+import { groupAndStackByDate } from '../../utils/dateFolding';
 import { showToast } from '../Toast';
 import { JdPasteAutoFill } from './JdPasteAutoFill';
 import type { ParsedJdResult } from '../../services/jdParser';
@@ -65,6 +70,29 @@ export function OpportunityManager({
   const [stageFilter, setStageFilter] = useState<string>('ALL');
   const [workModeFilter, setWorkModeFilter] = useState<string>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
+
+  // Date folds state for Kanban columns (foldId -> collapsed boolean)
+  const [collapsedFolds, setCollapsedFolds] = useState<Record<string, boolean>>({});
+
+  const toggleFold = (foldKey: string) => {
+    setCollapsedFolds((prev) => ({
+      ...prev,
+      [foldKey]: !prev[foldKey],
+    }));
+  };
+
+  const toggleAllFoldsForCol = (colId: string, foldKeys: string[]) => {
+    setCollapsedFolds((prev) => {
+      const anyExpanded = foldKeys.some((k) => !prev[`${colId}-${k}`]);
+      const next = { ...prev };
+      foldKeys.forEach((k) => {
+        next[`${colId}-${k}`] = anyExpanded;
+      });
+      return next;
+    });
+  };
+
+  const getOppDate = (opp: JobOpportunity) => opp.discoveredAt || opp.createdAt || opp.updatedAt;
 
   // Modals
   const [showAddModal, setShowAddModal] = useState(false);
@@ -577,6 +605,8 @@ export function OpportunityManager({
         }}>
           {KANBAN_COLUMNS.map((col) => {
             const colOpps = filtered.filter((o) => col.stages.includes(o.stage));
+            const dateFolds = groupAndStackByDate(colOpps, getOppDate);
+            const allCollapsed = dateFolds.length > 0 && dateFolds.every((f) => collapsedFolds[`${col.id}-${f.key}`]);
 
             return (
               <div
@@ -600,169 +630,311 @@ export function OpportunityManager({
                       {col.title}
                     </span>
                   </div>
-                  <span style={{
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {dateFolds.length > 1 && (
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        style={{
+                          padding: '1px 5px',
+                          fontSize: '10px',
+                          height: 20,
+                          gap: 3,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          borderRadius: 4,
+                          color: 'var(--text-muted)',
+                        }}
+                        onClick={() => toggleAllFoldsForCol(col.id, dateFolds.map((f) => f.key))}
+                        title={allCollapsed ? 'Expand all date folds' : 'Collapse all date folds'}
+                      >
+                        <Layers size={10} />
+                        <span>{dateFolds.length} folds</span>
+                      </button>
+                    )}
+                    <span style={{
+                      fontSize: '11px',
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 700,
+                      padding: '1px 6px',
+                      borderRadius: 10,
+                      background: 'var(--bg-subtle)',
+                      color: 'var(--text-secondary)',
+                    }}>
+                      {colOpps.length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Cards in column grouped into collapsible date folds */}
+                {colOpps.length === 0 ? (
+                  <div style={{
+                    padding: '28px 12px',
+                    textAlign: 'center',
+                    color: 'var(--text-muted)',
                     fontSize: '11px',
-                    fontFamily: 'var(--font-mono)',
-                    fontWeight: 700,
-                    padding: '1px 6px',
-                    borderRadius: 10,
-                    background: 'var(--bg-subtle)',
-                    color: 'var(--text-secondary)',
+                    border: '1px dashed var(--border-subtle)',
+                    borderRadius: 'var(--radius-sm)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 4,
                   }}>
-                    {colOpps.length}
-                  </span>
-                </div>
+                    <span>No {col.title.toLowerCase()}</span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {dateFolds.map((fold) => {
+                      const foldId = `${col.id}-${fold.key}`;
+                      const isFoldCollapsed = collapsedFolds[foldId] ?? false;
 
-                {/* Cards in column */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {colOpps.map((opp) => (
-                    <div
-                      key={opp.id}
-                      style={{
-                        padding: '12px',
-                        borderRadius: 'var(--radius-sm)',
-                        background: 'var(--bg-subtle)',
-                        border: '1px solid var(--border-subtle)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 8,
-                      }}
-                    >
-                      {/* Company & Role */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
-                            {opp.company}
-                          </div>
-                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-                            {opp.role}
-                          </div>
-                        </div>
-
-                        {opp.priority === 'HIGH' && (
-                          <span style={{
-                            fontSize: '9px',
-                            fontWeight: 700,
-                            padding: '1px 5px',
-                            borderRadius: 3,
-                            background: 'rgba(239, 68, 68, 0.15)',
-                            color: '#ef4444',
-                          }}>
-                            HIGH
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Meta chips */}
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', fontSize: '10px' }}>
-                        <span style={{ padding: '2px 5px', borderRadius: 3, background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)' }}>
-                          {opp.workMode}
-                        </span>
-                        {opp.location && (
-                          <span style={{ padding: '2px 5px', borderRadius: 3, background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)' }}>
-                            {opp.location}
-                          </span>
-                        )}
-                        {opp.minSalary && opp.maxSalary && (
-                          <span style={{ padding: '2px 5px', borderRadius: 3, background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', fontFamily: 'var(--font-mono)' }}>
-                            {formatINR(opp.minSalary)} - {formatINR(opp.maxSalary)}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Stage Selector & Actions */}
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        paddingTop: 6,
-                        borderTop: '1px solid rgba(255,255,255,0.05)',
-                        gap: 6,
-                      }}>
-                        <select
-                          className="form-input"
+                      return (
+                        <div
+                          key={fold.key}
                           style={{
-                            width: 'auto',
-                            padding: '2px 6px',
-                            fontSize: '10px',
-                            height: 22,
-                            borderRadius: 4,
-                            background: 'transparent',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 8,
                           }}
-                          value={opp.stage}
-                          onChange={(e) => handleStageChange(opp, e.target.value as JobStage)}
                         >
-                          {ALL_JOB_STAGES.map((s) => (
-                            <option key={s.stage} value={s.stage}>{s.label}</option>
-                          ))}
-                        </select>
-
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          {opp.stage === 'DISCOVERED' && (
-                            <button
-                              className="btn btn-primary btn-sm"
-                              style={{ padding: '2px 6px', fontSize: '10px', height: 22, gap: 2 }}
-                              onClick={() => setQuickApplyTargetOpp(opp)}
-                              title="Quick Apply"
-                            >
-                              <Send size={10} /> Apply
-                            </button>
-                          )}
-                          <button
-                            className="btn-icon"
-                            style={{ width: 22, height: 22, padding: 3 }}
-                            onClick={() => {
-                              setInterviewTargetOpp(opp);
-                              setIvRoundNumber(1);
-                              setIvRoundType('TECHNICAL');
-                              setIvOutcome('PENDING');
-                              setIvScheduledAt(todayDate());
+                          {/* Date Fold Header */}
+                          <div
+                            onClick={() => toggleFold(foldId)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                toggleFold(foldId);
+                              }
                             }}
-                            title="Log Interview Round"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '5px 8px',
+                              borderRadius: 'var(--radius-sm)',
+                              background: isFoldCollapsed ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.04)',
+                              border: '1px solid var(--border-subtle)',
+                              cursor: 'pointer',
+                              userSelect: 'none',
+                              transition: 'all 0.15s ease',
+                            }}
+                            title={`${isFoldCollapsed ? 'Expand' : 'Collapse'} ${fold.label} (${fold.formattedDate})`}
                           >
-                            <Calendar size={11} />
-                          </button>
-                          <button
-                            className="btn-icon"
-                            style={{ width: 22, height: 22, padding: 3 }}
-                            onClick={() => onOpenOutreach?.(opp)}
-                            title="Log Outreach"
-                          >
-                            <MessageSquare size={11} />
-                          </button>
-                          {opp.jobUrl && (
-                            <a
-                              href={opp.jobUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="btn-icon"
-                              style={{ width: 22, height: 22, padding: 3 }}
-                              title="Open Job URL"
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                              {isFoldCollapsed ? (
+                                <ChevronRight size={12} style={{ color: 'var(--text-muted)' }} />
+                              ) : (
+                                <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+                              )}
+                              <Calendar size={11} style={{ color: col.color, opacity: 0.85 }} />
+                              <span>{fold.label}</span>
+                              {fold.subLabel && (
+                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 400 }}>
+                                  · {fold.subLabel}
+                                </span>
+                              )}
+                            </div>
+
+                            <span
+                              style={{
+                                fontSize: '9px',
+                                fontFamily: 'var(--font-mono)',
+                                fontWeight: 700,
+                                padding: '1px 5px',
+                                borderRadius: 8,
+                                background: isFoldCollapsed ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.04)',
+                                color: isFoldCollapsed ? 'var(--text-primary)' : 'var(--text-muted)',
+                              }}
                             >
-                              <ExternalLink size={11} />
-                            </a>
+                              {fold.items.length}
+                            </span>
+                          </div>
+
+                          {/* Tickets inside this fold (Latest on top like a stack) */}
+                          {!isFoldCollapsed && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              {fold.items.map((opp) => {
+                                const oppDate = getOppDate(opp);
+                                return (
+                                  <div
+                                    key={opp.id}
+                                    style={{
+                                      padding: '12px',
+                                      borderRadius: 'var(--radius-sm)',
+                                      background: 'var(--bg-subtle)',
+                                      border: '1px solid var(--border-subtle)',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: 8,
+                                      transition: 'border-color 0.15s ease, transform 0.15s ease',
+                                    }}
+                                  >
+                                    {/* Company & Role + Priority & Date Badge */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                                      <div>
+                                        <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
+                                          {opp.company}
+                                        </div>
+                                        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+                                          {opp.role}
+                                        </div>
+                                      </div>
+
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                                        {opp.priority === 'HIGH' && (
+                                          <span style={{
+                                            fontSize: '9px',
+                                            fontWeight: 700,
+                                            padding: '1px 5px',
+                                            borderRadius: 3,
+                                            background: 'rgba(239, 68, 68, 0.15)',
+                                            color: '#ef4444',
+                                          }}>
+                                            HIGH
+                                          </span>
+                                        )}
+
+                                        <span
+                                          title={`Logged / Updated: ${formatDate(oppDate)}`}
+                                          style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 3,
+                                            fontSize: '9px',
+                                            color: 'var(--text-muted)',
+                                            background: 'rgba(255, 255, 255, 0.04)',
+                                            padding: '1px 5px',
+                                            borderRadius: 3,
+                                            fontFamily: 'var(--font-mono)',
+                                          }}
+                                        >
+                                          <Clock size={9} />
+                                          {timeAgo(oppDate)}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Meta chips */}
+                                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', fontSize: '10px' }}>
+                                      <span style={{ padding: '2px 5px', borderRadius: 3, background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)' }}>
+                                        {opp.workMode}
+                                      </span>
+                                      {opp.location && (
+                                        <span style={{ padding: '2px 5px', borderRadius: 3, background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)' }}>
+                                          {opp.location}
+                                        </span>
+                                      )}
+                                      {opp.minSalary && opp.maxSalary && (
+                                        <span style={{ padding: '2px 5px', borderRadius: 3, background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', fontFamily: 'var(--font-mono)' }}>
+                                          {formatINR(opp.minSalary)} - {formatINR(opp.maxSalary)}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Stage Selector & Actions */}
+                                    <div style={{
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      paddingTop: 6,
+                                      borderTop: '1px solid rgba(255,255,255,0.05)',
+                                      gap: 6,
+                                    }}>
+                                      <select
+                                        className="form-input"
+                                        style={{
+                                          width: 'auto',
+                                          padding: '2px 6px',
+                                          fontSize: '10px',
+                                          height: 22,
+                                          borderRadius: 4,
+                                          background: 'transparent',
+                                        }}
+                                        value={opp.stage}
+                                        onChange={(e) => handleStageChange(opp, e.target.value as JobStage)}
+                                      >
+                                        {ALL_JOB_STAGES.map((s) => (
+                                          <option key={s.stage} value={s.stage}>{s.label}</option>
+                                        ))}
+                                      </select>
+
+                                      <div style={{ display: 'flex', gap: 4 }}>
+                                        {opp.stage === 'DISCOVERED' && (
+                                          <button
+                                            className="btn btn-primary btn-sm"
+                                            style={{ padding: '2px 6px', fontSize: '10px', height: 22, gap: 2 }}
+                                            onClick={() => setQuickApplyTargetOpp(opp)}
+                                            title="Quick Apply"
+                                          >
+                                            <Send size={10} /> Apply
+                                          </button>
+                                        )}
+                                        <button
+                                          className="btn-icon"
+                                          style={{ width: 22, height: 22, padding: 3 }}
+                                          onClick={() => {
+                                            setInterviewTargetOpp(opp);
+                                            setIvRoundNumber(1);
+                                            setIvRoundType('TECHNICAL');
+                                            setIvOutcome('PENDING');
+                                            setIvScheduledAt(todayDate());
+                                          }}
+                                          title="Log Interview Round"
+                                        >
+                                          <Calendar size={11} />
+                                        </button>
+                                        <button
+                                          className="btn-icon"
+                                          style={{ width: 22, height: 22, padding: 3 }}
+                                          onClick={() => onOpenOutreach?.(opp)}
+                                          title="Log Outreach"
+                                        >
+                                          <MessageSquare size={11} />
+                                        </button>
+                                        {opp.jobUrl && (
+                                          <a
+                                            href={opp.jobUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="btn-icon"
+                                            style={{ width: 22, height: 22, padding: 3 }}
+                                            title="Open Job URL"
+                                          >
+                                            <ExternalLink size={11} />
+                                          </a>
+                                        )}
+                                        <button
+                                          className="btn-icon"
+                                          style={{ width: 22, height: 22, padding: 3 }}
+                                          onClick={() => openEdit(opp)}
+                                          title="Edit"
+                                        >
+                                          <Edit2 size={11} />
+                                        </button>
+                                        <button
+                                          className="btn-icon"
+                                          style={{ width: 22, height: 22, padding: 3, color: '#ef4444' }}
+                                          onClick={() => handleDelete(opp.id, opp.company)}
+                                          title="Delete"
+                                        >
+                                          <Trash2 size={11} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           )}
-                          <button
-                            className="btn-icon"
-                            style={{ width: 22, height: 22, padding: 3 }}
-                            onClick={() => openEdit(opp)}
-                            title="Edit"
-                          >
-                            <Edit2 size={11} />
-                          </button>
-                          <button
-                            className="btn-icon"
-                            style={{ width: 22, height: 22, padding: 3, color: '#ef4444' }}
-                            onClick={() => handleDelete(opp.id, opp.company)}
-                            title="Delete"
-                          >
-                            <Trash2 size={11} />
-                          </button>
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
