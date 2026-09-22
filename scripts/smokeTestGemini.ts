@@ -277,54 +277,80 @@ async function callGeminiLive(
     },
   });
 
-  const startTime = Date.now();
+  const models = [AI_MODEL, 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
+  let lastError = '';
 
-  return new Promise((resolve, reject) => {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${apiKey}`;
-    const req = https.request(
-      url,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(payload),
-        },
-        timeout: 60000,
-      },
-      (res) => {
-        let responseBody = '';
-        res.on('data', (chunk) => { responseBody += chunk; });
-        res.on('end', () => {
-          const latencyMs = Date.now() - startTime;
-          if (res.statusCode === 200) {
-            try {
-              const parsed = JSON.parse(responseBody);
-              const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-              const usage = parsed?.usageMetadata;
-              if (!text) {
-                reject(new Error('Missing candidate text in Gemini response'));
-              } else {
-                resolve({ rawText: text, usageMetadata: usage, latencyMs });
-              }
-            } catch (err: any) {
-              reject(new Error(`Failed to parse Gemini response: ${err.message}`));
-            }
-          } else {
-            reject(new Error(`Gemini API returned HTTP ${res.statusCode}: ${responseBody.slice(0, 300)}`));
+  for (const model of models) {
+    try {
+      let modelPayload = payload;
+      if (model !== AI_MODEL && model !== 'gemini-2.5-flash') {
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.generationConfig?.thinkingConfig) {
+            delete parsed.generationConfig.thinkingConfig;
+            modelPayload = JSON.stringify(parsed);
           }
-        });
+        } catch {
+          // keep
+        }
       }
-    );
 
-    req.on('timeout', () => {
-      req.destroy();
-      reject(new Error('Live Gemini request timed out after 60s'));
-    });
+      const startTime = Date.now();
+      const resData = await new Promise<{ rawText: string; usageMetadata: any; latencyMs: number }>((resolve, reject) => {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const req = https.request(
+          url,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(modelPayload),
+            },
+            timeout: 60000,
+          },
+          (res) => {
+            let responseBody = '';
+            res.on('data', (chunk) => { responseBody += chunk; });
+            res.on('end', () => {
+              const latencyMs = Date.now() - startTime;
+              if (res.statusCode === 200) {
+                try {
+                  const parsed = JSON.parse(responseBody);
+                  const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+                  const usage = parsed?.usageMetadata;
+                  if (!text) {
+                    reject(new Error('Missing candidate text in Gemini response'));
+                  } else {
+                    resolve({ rawText: text, usageMetadata: usage, latencyMs });
+                  }
+                } catch (err: any) {
+                  reject(new Error(`Failed to parse Gemini response: ${err.message}`));
+                }
+              } else {
+                reject(new Error(`Gemini API returned HTTP ${res.statusCode}: ${responseBody.slice(0, 300)}`));
+              }
+            });
+          }
+        );
 
-    req.on('error', (err) => reject(err));
-    req.write(payload);
-    req.end();
-  });
+        req.on('timeout', () => {
+          req.destroy();
+          reject(new Error(`Live Gemini request to ${model} timed out after 60s`));
+        });
+
+        req.on('error', (err) => reject(err));
+        req.write(modelPayload);
+        req.end();
+      });
+
+      return resData;
+    } catch (err: any) {
+      lastError = err.message || String(err);
+      console.warn(`[Smoke Test] ${model} unavailable: ${lastError}. Trying fallback model...`);
+    }
+  }
+
+  throw new Error(lastError);
 }
 
 // 4. Main smoke test executor

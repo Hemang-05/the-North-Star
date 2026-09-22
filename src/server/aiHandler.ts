@@ -298,11 +298,25 @@ export async function executeGeminiWithFallback(
   apiKey: string,
   timeoutMs: number = 30000
 ): Promise<string> {
-  const models = [AI_MODEL, 'gemini-3.6-flash'];
+  const models = [AI_MODEL, 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
   let lastError = '';
 
   for (const model of models) {
     try {
+      let modelPayload = payload;
+      // If falling back to 2.0 or other model, strip thinkingConfig if unsupported
+      if (model !== AI_MODEL && model !== 'gemini-2.5-flash') {
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.generationConfig?.thinkingConfig) {
+            delete parsed.generationConfig.thinkingConfig;
+            modelPayload = JSON.stringify(parsed);
+          }
+        } catch {
+          // keep original payload
+        }
+      }
+
       const response = await new Promise<{ statusCode: number; body: string }>((resolve, reject) => {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
         const req = https.request(
@@ -311,7 +325,7 @@ export async function executeGeminiWithFallback(
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Content-Length': Buffer.byteLength(payload),
+              'Content-Length': Buffer.byteLength(modelPayload),
             },
             timeout: timeoutMs,
           },
@@ -332,7 +346,7 @@ export async function executeGeminiWithFallback(
         });
 
         req.on('error', (err) => reject(err));
-        req.write(payload);
+        req.write(modelPayload);
         req.end();
       });
 
