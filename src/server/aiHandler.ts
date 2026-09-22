@@ -172,18 +172,75 @@ export async function readRequestBody(req: IncomingMessage, maxBytes: number): P
     return JSON.stringify(anyReq.body);
   }
 
-  let bodyBuffer = '';
-  let byteCount = 0;
-
-  for await (const chunk of req) {
-    byteCount += chunk.length;
-    if (byteCount > maxBytes) {
-      throw new Error(`Payload too large. Max allowed: ${maxBytes} bytes`);
-    }
-    bodyBuffer += chunk.toString('utf8');
+  if (anyReq.readableEnded || anyReq.complete) {
+    return '';
   }
 
-  return bodyBuffer;
+  return new Promise<string>((resolve, reject) => {
+    let bodyBuffer = '';
+    let byteCount = 0;
+    let settled = false;
+
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        cleanup();
+        resolve(bodyBuffer);
+      }
+    }, 5000);
+
+    const onData = (chunk: any) => {
+      const len = Buffer.isBuffer(chunk) ? chunk.length : Buffer.byteLength(String(chunk));
+      byteCount += len;
+      if (byteCount > maxBytes) {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timeout);
+          cleanup();
+          reject(new Error(`Payload too large. Max allowed: ${maxBytes} bytes`));
+        }
+        return;
+      }
+      bodyBuffer += chunk.toString('utf8');
+    };
+
+    const onEnd = () => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timeout);
+        cleanup();
+        resolve(bodyBuffer);
+      }
+    };
+
+    const onError = (err: Error) => {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timeout);
+        cleanup();
+        reject(err);
+      }
+    };
+
+    const cleanup = () => {
+      req.removeListener('data', onData);
+      req.removeListener('end', onEnd);
+      req.removeListener('error', onError);
+    };
+
+    req.on('data', onData);
+    req.on('end', onEnd);
+    req.on('error', onError);
+
+    if (anyReq.readableEnded || anyReq.complete) {
+      if (!settled) {
+        settled = true;
+        clearTimeout(timeout);
+        cleanup();
+        resolve(bodyBuffer);
+      }
+    }
+  });
 }
 
 /**
@@ -384,7 +441,7 @@ export function extractClientKey(req: IncomingMessage): string {
   if (Array.isArray(forwarded) && forwarded.length > 0) {
     return forwarded[0].trim();
   }
-  return req.socket.remoteAddress || '127.0.0.1';
+  return req.socket?.remoteAddress || '127.0.0.1';
 }
 
 /**
@@ -411,6 +468,15 @@ export async function handleAiAnalyzeRequest(
   limiter: RateLimiter = defaultRateLimiter
 ): Promise<void> {
   res.setHeader('Content-Type', 'application/json');
+
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.end();
+    return;
+  }
 
   if (req.method !== 'POST') {
     res.statusCode = 405;
@@ -611,6 +677,15 @@ export async function handleAiParseJdRequest(
 ): Promise<void> {
   res.setHeader('Content-Type', 'application/json');
 
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     res.statusCode = 405;
     res.end(JSON.stringify({ error: 'Method Not Allowed. Use POST.' }));
@@ -618,7 +693,7 @@ export async function handleAiParseJdRequest(
   }
 
   // Rate Limiting
-  const clientIp = req.headers['x-forwarded-for']?.toString() || req.socket.remoteAddress || 'local';
+  const clientIp = extractClientKey(req);
   const rateLimitResult = limiter.check(clientIp);
   if (!rateLimitResult.allowed) {
     res.statusCode = 429;
