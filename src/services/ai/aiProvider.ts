@@ -6,6 +6,7 @@
 
 import {
   AI_MODEL,
+  AI_FALLBACK_MODEL,
   type AIAnalysis,
   type AIRequest,
   type AIResponse,
@@ -16,6 +17,11 @@ export interface AIProvider {
   generateAnalysis(request: AIRequest): Promise<AIResponse>;
 }
 
+export interface GeminiProviderOptions {
+  primaryModel?: string;
+  fallbackModel?: string;
+}
+
 /**
  * Production Gemini Provider.
  * Communicates with the server-side `/api/ai/analyze` endpoint.
@@ -23,6 +29,13 @@ export interface AIProvider {
  */
 export class GeminiProvider implements AIProvider {
   readonly name = 'gemini';
+  readonly primaryModel: string;
+  readonly fallbackModel: string;
+
+  constructor(options?: GeminiProviderOptions) {
+    this.primaryModel = options?.primaryModel || AI_MODEL;
+    this.fallbackModel = options?.fallbackModel || AI_FALLBACK_MODEL;
+  }
 
   async generateAnalysis(request: AIRequest): Promise<AIResponse> {
     const startTime = Date.now();
@@ -69,7 +82,7 @@ export class GeminiProvider implements AIProvider {
       return {
         analysis: data.analysis,
         provider: data.provider || 'gemini',
-        model: data.model || AI_MODEL,
+        model: data.model || this.primaryModel,
         mode: request.mode,
         latencyMs: data.latencyMs || Date.now() - startTime,
         contextHash: '', // populated by AIService

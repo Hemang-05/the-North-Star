@@ -35,6 +35,7 @@ import {
 } from '../src/services/ai/aiPrompts.ts';
 import {
   AI_RESPONSE_SCHEMA,
+  callGeminiApi,
   sanitizeEvidenceReferences,
 } from '../src/server/aiHandler.ts';
 
@@ -251,106 +252,29 @@ function buildSampleContext(): AIContext {
   };
 }
 
-// 3. Make live HTTPS call to Gemini 3.7 Flash API
+// 3. Make live HTTPS call to Gemini using callGeminiApi (primary gemini-3.7-flash with retry, fallback to gemini-3.8-flash)
 async function callGeminiLive(
   systemPrompt: string,
   userPrompt: string,
   thinkingBudget: number,
   apiKey: string
-): Promise<{ rawText: string; usageMetadata: any; latencyMs: number }> {
-  const payload = JSON.stringify({
-    systemInstruction: {
-      parts: [{ text: systemPrompt }],
-    },
-    contents: [
-      {
-        role: 'user',
-        parts: [{ text: userPrompt }],
-      },
-    ],
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: AI_RESPONSE_SCHEMA,
-      thinkingConfig: {
-        thinkingBudget,
-      },
-    },
-  });
-
-  const models = [AI_MODEL, 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
-  let lastError = '';
-
-  for (const model of models) {
-    try {
-      let modelPayload = payload;
-      if (model !== AI_MODEL && model !== 'gemini-2.5-flash') {
-        try {
-          const parsed = JSON.parse(payload);
-          if (parsed.generationConfig?.thinkingConfig) {
-            delete parsed.generationConfig.thinkingConfig;
-            modelPayload = JSON.stringify(parsed);
-          }
-        } catch {
-          // keep
-        }
-      }
-
-      const startTime = Date.now();
-      const resData = await new Promise<{ rawText: string; usageMetadata: any; latencyMs: number }>((resolve, reject) => {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const req = https.request(
-          url,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Content-Length': Buffer.byteLength(modelPayload),
-            },
-            timeout: 60000,
-          },
-          (res) => {
-            let responseBody = '';
-            res.on('data', (chunk) => { responseBody += chunk; });
-            res.on('end', () => {
-              const latencyMs = Date.now() - startTime;
-              if (res.statusCode === 200) {
-                try {
-                  const parsed = JSON.parse(responseBody);
-                  const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-                  const usage = parsed?.usageMetadata;
-                  if (!text) {
-                    reject(new Error('Missing candidate text in Gemini response'));
-                  } else {
-                    resolve({ rawText: text, usageMetadata: usage, latencyMs });
-                  }
-                } catch (err: any) {
-                  reject(new Error(`Failed to parse Gemini response: ${err.message}`));
-                }
-              } else {
-                reject(new Error(`Gemini API returned HTTP ${res.statusCode}: ${responseBody.slice(0, 300)}`));
-              }
-            });
-          }
-        );
-
-        req.on('timeout', () => {
-          req.destroy();
-          reject(new Error(`Live Gemini request to ${model} timed out after 60s`));
-        });
-
-        req.on('error', (err) => reject(err));
-        req.write(modelPayload);
-        req.end();
-      });
-
-      return resData;
-    } catch (err: any) {
-      lastError = err.message || String(err);
-      console.warn(`[Smoke Test] ${model} unavailable: ${lastError}. Trying fallback model...`);
-    }
+): Promise<{ rawText: string; usageMetadata: any; latencyMs: number; modelUsed: string; fallbackUsed: boolean }> {
+  const startTime = Date.now();
+  const execResult = await callGeminiApi(systemPrompt, userPrompt, thinkingBudget, apiKey);
+  const latencyMs = Date.now() - startTime;
+  const parsed = JSON.parse(execResult.body);
+  const rawText = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const usageMetadata = parsed?.usageMetadata;
+  if (!rawText) {
+    throw new Error('Missing candidate text in Gemini response');
   }
-
-  throw new Error(lastError);
+  return {
+    rawText,
+    usageMetadata,
+    latencyMs,
+    modelUsed: execResult.modelUsed,
+    fallbackUsed: execResult.fallbackUsed,
+  };
 }
 
 // 4. Main smoke test executor
@@ -382,7 +306,7 @@ async function main() {
 
   console.log('\nInvoking Gemini 3.7 Flash API (with reasoning & schema constraints)...');
   try {
-    const { rawText, usageMetadata, latencyMs } = await callGeminiLive(
+    const { rawText, usageMetadata, latencyMs, modelUsed, fallbackUsed } = await callGeminiLive(
       systemPrompt,
       userPrompt,
       modeConfig.thinkingBudget,
@@ -390,6 +314,7 @@ async function main() {
     );
 
     console.log(`✓ Response received in ${latencyMs}ms`);
+    console.log(`✓ Model Used: ${modelUsed}${fallbackUsed ? ' (Fallback Engaged)' : ' (Canonical Primary)'}`);
     if (usageMetadata) {
       console.log(`✓ Usage: prompt=${usageMetadata.promptTokenCount}, thoughts=${usageMetadata.thoughtsTokenCount || 0}, candidates=${usageMetadata.candidatesTokenCount}`);
     }

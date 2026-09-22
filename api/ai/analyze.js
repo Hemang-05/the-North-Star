@@ -3,6 +3,7 @@ import https from "node:https";
 
 // src/types/ai.ts
 var AI_MODEL = "gemini-3.7-flash";
+var AI_FALLBACK_MODEL = "gemini-3.8-flash";
 var THINKING_LEVEL_BUDGETS = {
   LOW: 1024,
   MEDIUM: 2048,
@@ -465,69 +466,174 @@ async function callGeminiApi(systemPrompt, userPrompt, thinkingBudget, apiKey) {
       }
     }
   });
-  return executeGeminiWithFallback(payload, apiKey, 45e3);
+  return executeGeminiWithFallback(payload, apiKey, { timeoutMs: 45e3 });
 }
-async function executeGeminiWithFallback(payload, apiKey, timeoutMs = 3e4) {
-  const models = [AI_MODEL, "gemini-3.6-flash", "gemini-3.5-flash", "gemini-flash-latest"];
-  let lastError = "";
-  for (const model of models) {
+function isTransientStatus(statusCode) {
+  return statusCode === 503 || statusCode === 429 || statusCode === 500 || statusCode === 502 || statusCode === 504;
+}
+function isPermanentStatus(statusCode) {
+  return statusCode === 400 || statusCode === 401 || statusCode === 403 || statusCode === 404;
+}
+function calculateBackoffDelay(attempt, baseBackoffMs) {
+  if (baseBackoffMs <= 0) return 0;
+  const exponential = baseBackoffMs * Math.pow(2, attempt - 1);
+  const jitter = Math.floor(Math.random() * (baseBackoffMs * 0.5));
+  return exponential + jitter;
+}
+async function performGeminiHttpRequest(model, payload, apiKey, timeoutMs) {
+  let modelPayload = payload;
+  if (model !== AI_MODEL && model !== AI_FALLBACK_MODEL) {
     try {
-      let modelPayload = payload;
-      if (model !== AI_MODEL && model !== "gemini-2.5-flash") {
-        try {
-          const parsed = JSON.parse(payload);
-          if (parsed.generationConfig?.thinkingConfig) {
-            delete parsed.generationConfig.thinkingConfig;
-            modelPayload = JSON.stringify(parsed);
-          }
-        } catch {
-        }
+      const parsed = JSON.parse(payload);
+      if (parsed.generationConfig?.thinkingConfig) {
+        delete parsed.generationConfig.thinkingConfig;
+        modelPayload = JSON.stringify(parsed);
       }
-      const response = await new Promise((resolve, reject) => {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        const req = https.request(
-          url,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Content-Length": Buffer.byteLength(modelPayload)
-            },
-            timeout: timeoutMs
-          },
-          (res) => {
-            let responseBody = "";
-            res.on("data", (chunk) => {
-              responseBody += chunk;
-            });
-            res.on("end", () => {
-              resolve({ statusCode: res.statusCode || 500, body: responseBody });
-            });
-          }
-        );
-        req.on("timeout", () => {
-          req.destroy();
-          reject(new Error(`Gemini API call to ${model} timed out after ${timeoutMs / 1e3}s`));
+    } catch {
+    }
+  }
+  return new Promise((resolve, reject) => {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const req = https.request(
+      url,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(modelPayload)
+        },
+        timeout: timeoutMs
+      },
+      (res) => {
+        let responseBody = "";
+        res.on("data", (chunk) => {
+          responseBody += chunk;
         });
-        req.on("error", (err) => reject(err));
-        req.write(modelPayload);
-        req.end();
-      });
+        res.on("end", () => {
+          resolve({ statusCode: res.statusCode || 500, body: responseBody });
+        });
+      }
+    );
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error(`Gemini API call to ${model} timed out after ${timeoutMs / 1e3}s`));
+    });
+    req.on("error", (err) => reject(err));
+    req.write(modelPayload);
+    req.end();
+  });
+}
+async function executeGeminiWithFallback(payload, apiKey, optionsOrTimeout = 3e4) {
+  const options = typeof optionsOrTimeout === "number" ? { timeoutMs: optionsOrTimeout } : optionsOrTimeout;
+  const primaryModel = options.primaryModel || AI_MODEL;
+  const fallbackModel = options.fallbackModel || AI_FALLBACK_MODEL;
+  const maxPrimaryRetries = options.maxPrimaryRetries ?? 2;
+  const maxFallbackRetries = options.maxFallbackRetries ?? 1;
+  const baseBackoffMs = options.baseBackoffMs ?? 600;
+  const timeoutMs = options.timeoutMs ?? 3e4;
+
+  let totalAttempts = 0;
+  let lastError = "";
+
+  for (let attempt = 1; attempt <= (1 + maxPrimaryRetries); attempt++) {
+    totalAttempts++;
+    try {
+      const response = await performGeminiHttpRequest(primaryModel, payload, apiKey, timeoutMs);
       if (response.statusCode === 200) {
-        return response.body;
+        if (attempt > 1) {
+          console.log(`[AI Server] Primary model (${primaryModel}) succeeded on retry attempt ${attempt}.`);
+        }
+        return {
+          body: response.body,
+          modelUsed: primaryModel,
+          fallbackUsed: false,
+          attempts: totalAttempts
+        };
       }
-      lastError = `Gemini API (${model}) returned status ${response.statusCode}: ${response.body.slice(0, 300)}`;
-      if (response.statusCode === 503 || response.statusCode === 404 || response.statusCode === 429) {
-        console.warn(`[AI Server] ${model} unavailable (status ${response.statusCode}). Attempting fallback model...`);
-        continue;
+      lastError = `Gemini API (${primaryModel}) returned status ${response.statusCode}: ${response.body.slice(0, 300)}`;
+      if (isPermanentStatus(response.statusCode)) {
+        console.warn(`[AI Server] Permanent error (${response.statusCode}) from ${primaryModel}. Aborting without retry or fallback.`);
+        throw new Error(lastError);
       }
-      throw new Error(lastError);
+      if (isTransientStatus(response.statusCode)) {
+        console.warn(`[AI Server] ${primaryModel} transient failure (${response.statusCode}) on attempt ${attempt}/${1 + maxPrimaryRetries}.`);
+        if (attempt <= maxPrimaryRetries) {
+          const delay = calculateBackoffDelay(attempt, baseBackoffMs);
+          if (delay > 0) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+          continue;
+        }
+      } else {
+        throw new Error(lastError);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       lastError = msg;
-      console.warn(`[AI Server] Error calling ${model}: ${msg}. Attempting fallback...`);
+      if (msg.includes("status 400") || msg.includes("status 401") || msg.includes("status 403") || msg.includes("status 404")) {
+        throw err;
+      }
+      console.warn(`[AI Server] Network/timeout error calling ${primaryModel} on attempt ${attempt}/${1 + maxPrimaryRetries}: ${msg}`);
+      if (attempt <= maxPrimaryRetries) {
+        const delay = calculateBackoffDelay(attempt, baseBackoffMs);
+        if (delay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+        continue;
+      }
     }
   }
+
+  console.warn(`[AI Server] Primary model (${primaryModel}) exhausted ${1 + maxPrimaryRetries} attempts. Engaging controlled fallback to ${fallbackModel}...`);
+
+  for (let attempt = 1; attempt <= (1 + maxFallbackRetries); attempt++) {
+    totalAttempts++;
+    try {
+      const response = await performGeminiHttpRequest(fallbackModel, payload, apiKey, timeoutMs);
+      if (response.statusCode === 200) {
+        console.log(`[AI Server] Fallback model (${fallbackModel}) succeeded on attempt ${attempt}.`);
+        return {
+          body: response.body,
+          modelUsed: fallbackModel,
+          fallbackUsed: true,
+          attempts: totalAttempts
+        };
+      }
+      lastError = `Gemini Fallback API (${fallbackModel}) returned status ${response.statusCode}: ${response.body.slice(0, 300)}`;
+      if (isPermanentStatus(response.statusCode)) {
+        console.warn(`[AI Server] Permanent error (${response.statusCode}) from fallback model ${fallbackModel}.`);
+        throw new Error(lastError);
+      }
+      if (isTransientStatus(response.statusCode)) {
+        console.warn(`[AI Server] Fallback model (${fallbackModel}) transient failure (${response.statusCode}) on attempt ${attempt}/${1 + maxFallbackRetries}.`);
+        if (attempt <= maxFallbackRetries) {
+          const delay = calculateBackoffDelay(attempt, baseBackoffMs);
+          if (delay > 0) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+          continue;
+        }
+      } else {
+        throw new Error(lastError);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      lastError = msg;
+      if (msg.includes("status 400") || msg.includes("status 401") || msg.includes("status 403") || msg.includes("status 404")) {
+        throw err;
+      }
+      console.warn(`[AI Server] Network/timeout error calling fallback ${fallbackModel} on attempt ${attempt}: ${msg}`);
+      if (attempt <= maxFallbackRetries) {
+        const delay = calculateBackoffDelay(attempt, baseBackoffMs);
+        if (delay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+        continue;
+      }
+    }
+  }
+
+  console.error(`[AI Server] Both primary (${primaryModel}) and fallback (${fallbackModel}) models exhausted. Final error: ${lastError}`);
   throw new Error(lastError || "All Gemini models failed to respond.");
 }
 function extractClientKey(req) {
@@ -617,9 +723,9 @@ async function handleAiAnalyzeRequest(req, res, limiter = defaultRateLimiter) {
   const userPrompt = buildAIUserPrompt(context);
   const startTime = Date.now();
   try {
-    const rawResponse = await callGeminiApi(systemPrompt, userPrompt, thinkingBudget, apiKey);
+    const execResult = await callGeminiApi(systemPrompt, userPrompt, thinkingBudget, apiKey);
     const latencyMs = Date.now() - startTime;
-    const geminiJson = JSON.parse(rawResponse);
+    const geminiJson = JSON.parse(execResult.body);
     const candidateText = geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!candidateText) {
       throw new Error("Gemini response missing candidate text part");
@@ -633,21 +739,26 @@ async function handleAiAnalyzeRequest(req, res, limiter = defaultRateLimiter) {
         success: true,
         analysis: sanitizedAnalysis,
         provider: "gemini",
-        model: AI_MODEL,
+        model: execResult.modelUsed,
+        fallbackUsed: execResult.fallbackUsed,
         mode,
         latencyMs,
         createdAt: (/* @__PURE__ */ new Date()).toISOString()
       })
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("[Layer 4 AI Server Error]:", message);
-    res.statusCode = 502;
+    const rawMessage = err instanceof Error ? err.message : String(err);
+    console.error("[Layer 4 AI Server Error]:", rawMessage);
+    const isTransient = rawMessage.includes("503") || rawMessage.includes("429") || rawMessage.includes("timed out") || rawMessage.includes("exhausted");
+    const userFacingError = isTransient
+      ? "AI analysis is temporarily unavailable. Your North Star data is safe. Please try again shortly."
+      : "Failed to generate AI analysis. Please try again.";
+    res.statusCode = isTransient ? 503 : 502;
     res.end(
       JSON.stringify({
         success: false,
         category: "UPSTREAM_FAILURE",
-        error: message
+        error: userFacingError
       })
     );
   }

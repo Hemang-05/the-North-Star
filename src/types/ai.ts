@@ -10,6 +10,7 @@ import type { TimePeriodType } from './intelligence.ts';
 import type { CrossPillarFact, Alert, DataQualityReport } from './layer5.ts';
 
 export const AI_MODEL = 'gemini-3.7-flash';
+export const AI_FALLBACK_MODEL = 'gemini-3.8-flash';
 
 export type AIAnalysisMode =
   | 'DAILY'
